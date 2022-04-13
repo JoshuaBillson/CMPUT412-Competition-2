@@ -1,0 +1,9 @@
+<package>
+  <name>competition2</name>
+  <version>0.1.0</version>
+  <description>CMPUT 412 - Competition 2</description>
+  <maintainer email="jmbillson@outlook.com">Joshua Billson</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+</package>
