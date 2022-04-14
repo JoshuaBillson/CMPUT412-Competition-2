@@ -10,11 +10,13 @@ class Tag():
         self.size = tag_size
         self.locations = {}
         self.orientations = {}
+        self.type = None
     
 
-    def add_tag(self,id,x,y,z,theta_x,theta_y,theta_z):
+    def add_tag(self,id,x,y,z,theta_x,theta_y,theta_z, type):
         self.locations[id]=self.TranslationVector(x,y,z)
         self.orientations[id]=self.eulerAnglesToRotationMatrix(theta_x,theta_y,theta_z)
+        self.type = type
 
         
     # Calculates Rotation Matrix given euler angles.
