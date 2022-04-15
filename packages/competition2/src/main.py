@@ -155,12 +155,21 @@ class MyPublisherNode(DTROS):
             smach.StateMachine.add('STRAIGHT', TurnStraight(motor_controller, line_tracker), transitions={'follow-path':'FOLLOW_PATH'})
             smach.StateMachine.add('AVOID_OBSTACLE', AvoidObstacle(motor_controller, line_tracker), transitions={'follow-path':'FOLLOW_PATH'})
     
-        # Execute SMACH plan
+        # Execute SMACH placompetitionn
         outcome = sm.execute()
 
         motor_controller.drive(0, 0)
         rospy.sleep(1)
         rospy.loginfo("FINISHED COMPETITION 2")
+
+    def on_shutdown(self):
+        """Shutdown procedure.
+        - Publishes a zero velocity command at shutdown.
+        """
+
+        #TODO KILL MOTORS
+
+        super(MyPublisherNode, self).on_shutdown()
 
 
 if __name__ == '__main__':
