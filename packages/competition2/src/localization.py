@@ -19,7 +19,7 @@ class LocalizationNode(DTROS):
 
     def __init__(self, node_name):
         # initialize the DTROS parent class
-        super(LocalizationNode, self).__init__(node_name=node_name, node_type=NodeType."generic")
+        super(LocalizationNode, self).__init__(node_name=node_name, node_type=NodeType.GENERIC)
 
         # April Tag Thread
         self.thread = Thread(target=self.detect_loop)
