@@ -11,6 +11,7 @@ import rospy
 from threading import Thread, Lock
 from tag import Tag
 from sensor_msgs.msg import CompressedImage
+from competition2.msgs import Localization
 from geometry_msgs.msg import Quaternion, Point, Pose, Vector3
 from std_msgs.msg import Int32
 from tf.transformations import quaternion_from_euler, euler_from_quaternion
