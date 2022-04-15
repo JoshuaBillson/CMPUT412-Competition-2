@@ -11,9 +11,10 @@ import smach
 from threading import Lock, Thread
 from graph import MapGraph
 
-MOTOR_TOPIC = "/csc22912/car_cmd_switch_node/cmd"
-LINE_TRACKER_TOPIC = "/csc22912/output/line_tracker"
-LOCALIZATION_TOPIC = "/csc22912/output/localization"
+HOSTNAME = "/" + os.uname()[1]
+MOTOR_TOPIC = HOSTNAME + "/car_cmd_switch_node/cmd"
+LINE_TRACKER_TOPIC = HOSTNAME + "/output/line_tracker"
+LOCALIZATION_TOPIC = HOSTNAME + "/output/localization"
 VELOCITY = 0.30
 
 class MotorController:
