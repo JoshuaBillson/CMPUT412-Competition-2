@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 
 import os
@@ -13,14 +14,14 @@ from tag import Tag
 from sensor_msgs.msg import CompressedImage
 from competition2.msgs import Localization
 from geometry_msgs.msg import Quaternion, Point, Pose, Vector3
-from std_msgs.msg import Int32
+from std_msgs.msg import Int32, String
 from tf.transformations import quaternion_from_euler, euler_from_quaternion
 from dt_apriltags import Detector
 from duckietown.dtros import DTROS, NodeType
 
-POSE_TOPIC = "csc22912/output/position"
-ORIENTATION_TOPIC = "csc22912/output/orientation"
-TAG_ID_TOPIC = "csc22912/output/tag_id"
+
+HOSTNAME = "/" + os.uname()[1]
+LOCATION_TOPIC = HOSTNAME + "/output/location"
 
 
 class LocalizationNode(DTROS):
@@ -48,9 +49,7 @@ class LocalizationNode(DTROS):
      
         # Add your subsribers or publishers here
         self.subscriber = rospy.Subscriber("/csc22912/camera_node/image/compressed", CompressedImage, self.imgCallback, queue_size=1)
-        self.location_publisher = rospy.Publisher(POSE_TOPIC, Vector3, queue_size=10)
-        self.orientation_publisher = rospy.Publisher(ORIENTATION_TOPIC, Vector3, queue_size=10)
-        self.id_publisher = rospy.Publisher(TAG_ID_TOPIC, Int32, queue_size=10)
+        self.location_publisher = rospy.Publisher(LOCATION_TOPIC, Localization, queue_size=10)
 
         # Add information about tags
         TAG_SIZE = .08
@@ -118,7 +117,8 @@ class LocalizationNode(DTROS):
         """Loop To Detect Location From Current Camera Image"""
         rate = rospy.Rate(5)
         while not rospy.is_shutdown():
-
+            
+            msg = Localization()
             # Copy The Camera Image
             if self.img is not None:
                 with self.mutex:
@@ -150,7 +150,7 @@ class LocalizationNode(DTROS):
                 if len(tags) > 0:
                     tag = tags[0]
                     tag_id_msg = Int32(tag.tag_id)
-                    self.id_publisher.publish(tag_id_msg)
+                    msg.tag_id = tag_id_msg
 
                 # If No Tags Were Detected, The Location Does Not Change
                 self.location = location / count if count > 0 else self.location
@@ -161,14 +161,26 @@ class LocalizationNode(DTROS):
             position_msg.x = self.location[0,0]
             position_msg.y = self.location[1,0]
             position_msg.z = self.location[2,0]
-            self.location_publisher.publish(position_msg)
+            msg.position = position_msg
 
             # Publish Orientation
             orientation_msg = Vector3()
             orientation_msg.x = self.rotation[0,0]
             orientation_msg.y = self.rotation[1,0]
             orientation_msg.z = self.rotation[2,0]
-            self.orientation_publisher.publish(orientation_msg)
+            msg.orientation = orientation_msg
+
+            # Publish current tile location
+            tile_msg = String()
+            xgrid = math.ceil(round(self.location[0,0],1)/0.6)
+            zgrid = math.ceil(round(self.location[2,0],1)/0.6)
+            gridletters = ['E','D','C','B','A']
+            zgrid_corr = gridletters[zgrid]
+            current_tile = f"{zgrid_corr}{xgrid}"
+            tile_msg = String(current_tile)
+            msg.Quadrant = tile_msg
+
+            self.location_publisher.publish(msg)
 
             #rospy.loginfo(f"Rotation: ({self.rotation[0,0]}, {self.rotation[1,0]}, {self.rotation[2,0]})")
             #rospy.loginfo(f"Location: ({self.location[0,0]}, {self.location[1,0]}, {self.location[2,0]})")
@@ -182,7 +194,6 @@ class LocalizationNode(DTROS):
     def undistort(self, img):
         '''
         Takes a fisheye-distorted image and undistorts it
-
         Adapted from: https://github.com/asvath/SLAMDuck
         '''
         height = img.shape[0]
