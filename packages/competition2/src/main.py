@@ -24,12 +24,12 @@ class MotorController:
         self.saved_ticks = 0
         self.lane_change_time = 300
         self.min_distance = 0.25
+        self.msg = Twist2DStamped
 
     def drive(self, angularVelocity, linearVelocity):
-        msg = Twist2DStamped()
-        msg.v = linearVelocity
-        msg.omega = -(angularVelocity + self.offset)/26
-        self.pub.publish(msg)
+        self.msg.v = linearVelocity
+        self.msg.omega = -(angularVelocity + self.offset)/26
+        self.pub.publish(self.msg)
         self.rate.sleep()
 
 #class LocalizationReader:
@@ -85,14 +85,15 @@ class FollowPath(State):
                 self.motor_publisher.saved_ticks = self.left_tracker.get_left_ticks()
                 self.motor_publisher.offset *= -1
                 self.motor_publisher.lane_changed = True
-                print("CHANGING TO LEFT LANE")
+                rospy.loginfo("CHANGING TO LEFT LANE")
 
             # Drive for a little bit then switch back lanes
             if self.left_tracker.get_left_ticks() > (self.motor_publisher.saved_ticks + self.motor_publisher.lane_change_time) and self.motor_publisher.lane_changed is True:
-                print("CHANGING TO RIGHT LANE")
+                rospy.loginfo("CHANGING TO RIGHT LANE")
                 self.motor_publisher.offset *= -1
                 self.motor_publisher.lane_changed = False
             self.drive(self.track_line())
+            self.rate.sleep()
 
         return "intersection"
 
@@ -182,7 +183,7 @@ class MyPublisherNode(DTROS):
                                                                    self.left_tracker),
                                    transitions={'follow-path':'FOLLOW_PATH'})
 
-        # Execute SMACH placompetitionn
+        # Execute SMACH plan
         outcome = self.sm.execute()
 
         self.motor_controller.drive(0, 0)

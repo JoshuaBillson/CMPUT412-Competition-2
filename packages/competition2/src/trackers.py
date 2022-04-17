@@ -29,6 +29,7 @@ class LineTracker:
         with self.mutex:
             return self.line
 
+
 class TofTracker:
     def __init__(self):
         self.distance = 0
@@ -43,6 +44,7 @@ class TofTracker:
         with self.mutex:
             return self.distance
 
+
 class LeftTracker:
     def __init__(self):
         self.left_ticks = 0
@@ -56,4 +58,3 @@ class LeftTracker:
     def get_left_ticks(self):
         with self.mutex:
             return self.left_ticks
-
