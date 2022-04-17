@@ -4,8 +4,8 @@ import time
 import os
 import rospy
 from std_msgs.msg import Float32, Int32, String
-from duckietown.dtros import DTRgrapgOS, NodeType
-from duckietown_msgs.msg import Twist2DStamped, WheelsCmdStamped
+from duckietown.dtros import NodeType
+from duckietown_msgs.msg import Twist2DStamped
 from std_msgs.msg import String
 import smach
 from threading import Lock, Thread
