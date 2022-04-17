@@ -87,7 +87,7 @@ class LocalizationNode(DTROS):
 
 
         # Load camera parameters
-        with open("/data/config/calibrations/camera_intrinsic/csc22912.yaml") as file:
+        with open("/data/config/calibrations/camera_intrinsic/" + os.uname()[1] + ".yaml") as file:
                 camera_list = yaml.load(file,Loader = yaml.FullLoader)
 
         self.camera_intrinsic_matrix = np.array(camera_list['camera_matrix']['data']).reshape(3,3)
