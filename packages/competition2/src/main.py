@@ -18,19 +18,19 @@ VELOCITY = 0.40
 class MotorController:
     def __init__(self):
         self.pub = rospy.Publisher(MOTOR_TOPIC, Twist2DStamped, queue_size=1)
-        self.rate = rospy.Rate(30)
+        #self.rate = rospy.Rate(30)
         self.offset = 100
         self.lane_changed = False
         self.saved_ticks = 0
-        self.lane_change_time = 300
-        self.min_distance = 0.25
-        self.msg = Twist2DStamped
+        self.lane_change_time = 325
+        self.min_distance = 0.30
+        self.msg = Twist2DStamped()
 
     def drive(self, angularVelocity, linearVelocity):
         self.msg.v = linearVelocity
         self.msg.omega = -(angularVelocity + self.offset)/26
         self.pub.publish(self.msg)
-        self.rate.sleep() # Do we need this second sleep wouldn't the sleep in FollowPath handle this?  As drive is only
+        #self.rate.sleep() # Do we need this second sleep wouldn't the sleep in FollowPath handle this?  As drive is only
                           # ever executed once, it is not in any loop?
 
 #class LocalizationReader:
@@ -50,7 +50,7 @@ class MotorController:
 
 class State(smach.State):
     def __init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, outcomes, input_keys=[], output_keys=[]):
-        self.rate = rospy.Rate(30)
+        self.rate = rospy.Rate(10)
         self.line_tracker: LineTracker = line_tracker
         self.motor_publisher: MotorController = motor_publisher
         self.tof_tracker: TofTracker = tof_tracker
