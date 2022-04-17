@@ -60,7 +60,7 @@ class LocalizationNode(DTROS):
         self.tags.add_tag(15, 2.535, 0, 0.045, 0, -math.pi / 2, 0, "generic")
         self.tags.add_tag(21, 1.815, 0, 1.48, 0, math.pi, 0, "generic") 
         self.tags.add_tag(22, 2.08, 0, 0.56, 0, math.pi / 2, 0, "generic")
-        self.tags.add_tag(23, 2.925, 0, 1.82, 0, math.pi, 0, "generic")
+        self.tags.add_tag(23, 2.925, 0, 1.82, 0, 0, 0, "generic")
         self.tags.add_tag(24, 1.12, 0, 2.93, 0, math.pi / 2, 0, "generic")
         self.tags.add_tag(35, 1.74, 0, 1.155, 0, 0, 0, "3wayright") 
         self.tags.add_tag(36, 0.56, 0, 2.335, 0, 0, 0, "3wayright")
