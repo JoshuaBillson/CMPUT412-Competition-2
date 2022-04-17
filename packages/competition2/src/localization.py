@@ -179,7 +179,7 @@ class LocalizationNode(DTROS):
             tile_msg = String(current_tile)
             msg.Quadrant = tile_msg
 
-            rospy.loginfo(msg)
+            #rospy.loginfo(msg)
             self.location_publisher.publish(msg)
 
             #rospy.loginfo(f"Rotation: ({self.rotation[0,0]}, {self.rotation[1,0]}, {self.rotation[2,0]})")
