@@ -91,7 +91,7 @@ class LocalizationNode(DTROS):
         self.tags.add_tag(207, 1.22, 0, 1.155, 0, math.pi / 2, 0, "3waytee")
         self.tags.add_tag(226, 0.045, 0, 1.82, 0, math.pi, 0, "3wayleft")
         self.tags.add_tag(227, 0.045, 0, 1.225, 0, math.pi, 0, "3wayleft")
-        self.tags.add_tag(228, 0.56, 0, 1.75, 0, math.pi, 0, "3wayright")
+        self.tags.add_tag(228, 0.56, 0, 1.75, 0, 0, 0, "3wayright")
         self.tags.add_tag(303, 2.415, 0, 0.635, 0, math.pi, 0, "3wayright")
         self.tags.add_tag(304, 1.155, 0, 2.335, 0, math.pi / 2, 0, "generic")
 
