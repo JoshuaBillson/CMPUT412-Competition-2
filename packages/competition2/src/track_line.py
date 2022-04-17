@@ -8,7 +8,6 @@ from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import Float32
 import os
 from threading import Lock
-from duckietown_msgs.msg import Twist2DStamped
 
 road_mask = [(20,60,0), (50,255,255)]
 HOSTNAME = "/" + os.uname()[1]
@@ -27,20 +26,16 @@ class Camera(DTROS):
         self.pub = rospy.Publisher("/output/line_tracker",
                                    Float32,
                                    queue_size=1)
-        #self.vel_pub = rospy.Publisher(HOSTNAME+"/car_cmd_switch_node/cmd",
-        #                               Twist2DStamped,
-        #                               queue_size=1)
         self.np_arr = None
-        self.tof = None
         self.msg = Float32()
         self.mutex = Lock()
+        self.rate = rospy.Rate(30)
 
     def img_callback(self, ros_data):
         with self.mutex:
             self.np_arr = np.frombuffer(ros_data.data, np.uint8)
 
     def run(self):
-        rate = rospy.Rate(30)
         while not rospy.is_shutdown():
             if self.np_arr is not None:
                 with self.mutex:
@@ -73,14 +68,11 @@ class Camera(DTROS):
 
                 self.msg.data = centroid
                 self.pub.publish(centroid)
-                #twist = Twist2DStamped()
-                #twist.v = .30
-                #twist.omega = -centroid/20
-                #self.vel_pub.publish(twist)
             else:
                 pass
 
-            rate.sleep()
+            self.rate.sleep()
+
 
 if __name__ == '__main__':
     # create the node
