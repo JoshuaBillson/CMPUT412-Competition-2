@@ -30,7 +30,8 @@ class MotorController:
         self.msg.v = linearVelocity
         self.msg.omega = -(angularVelocity + self.offset)/26
         self.pub.publish(self.msg)
-        self.rate.sleep()
+        self.rate.sleep() # Do we need this second sleep wouldn't the sleep in FollowPath handle this?  As drive is only
+                          # ever executed once, it is not in any loop?
 
 #class LocalizationReader:
 #    def __init__(self):
