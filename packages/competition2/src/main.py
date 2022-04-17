@@ -23,7 +23,7 @@ class MotorController:
         self.lane_changed = False
         self.saved_ticks = 0
         self.lane_change_time = 325
-        self.min_distance = 0.30
+        self.min_distance = 0.27
         self.msg = Twist2DStamped()
 
     def drive(self, angularVelocity, linearVelocity):
