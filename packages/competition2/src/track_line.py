@@ -1,104 +1,81 @@
 #!/usr/bin/env python3
-
-import time
 import rospy
-import cv2
-from std_msgs.msg import Float32, Int32
+from duckietown.dtros import DTROS, NodeType
 import numpy as np
+import cv2
 from sensor_msgs.msg import CompressedImage
+from std_msgs.msg import Float32
+import os
+from threading import Lock
 
+road_mask = [(20,60,0), (50,255,255)]
+HOSTNAME = "/" + os.uname()[1]
 
-class LineTracker:
-    '''This Class Runs A ROS Node For Tracking The Centroid Of The Path From A Given Camera Feed'''
-    def __init__(self, debug=False):
-        self.debug = debug
-        self.last_reading = 0
-        self.last_readings = [0 for x in range(10)]
-        self.path_pub = rospy.Publisher("/csc22912/output/line_tracker", Float32)
-        self.image_pub = rospy.Publisher("/csc22912/output/image_raw/compressed", CompressedImage)
-        self.subscriber = rospy.Subscriber("/csc22912/camera_node/image/compressed", CompressedImage, self.imgCallback, queue_size=1)
-    
-    @staticmethod
-    def filter_yellow(img):
-        """Set Yellow To White And Everything Else To Black"""
-        low = np.array([18, 75, 75])
-        high = np.array([45, 255, 255])
-        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        return cv2.inRange(hsv, low, high)
+class Camera(DTROS):
+    def __init__(self, node_name):
+        # initialize the DTROS parent class
+        super(Camera, self).__init__(node_name=node_name, node_type=NodeType.GENERIC)
+        #self.img_pub = rospy.Publisher("/output/image/compressed",
+        #                           CompressedImage,
+        #                           queue_size= 1)
+        self.sub = rospy.Subscriber(HOSTNAME + "/camera_node/image/compressed",
+                                    CompressedImage,
+                                    self.img_callback,
+                                    queue_size=1)
+        self.pub = rospy.Publisher("/output/line_tracker",
+                                   Float32,
+                                   queue_size=1)
+        self.np_arr = None
+        self.msg = Float32()
+        self.mutex = Lock()
+        self.rate = rospy.Rate(30)
 
-
-    @staticmethod
-    def compute_centroid(image, height, width):
-        """Given A Binary Image, Compute The Centroid Of The Largest Contour."""
-        x, y, count = 0, 0, 0
-        contours, _ = cv2.findContours(image, 1, cv2.CHAIN_APPROX_SIMPLE)
-        moments = [cv2.moments(x) for x in contours]
-        rects = [cv2.boundingRect(x) for x in contours]
-        for m, r in zip(moments, rects):
-            if m['m00'] != 0:
-                # if (not (r[0] < (0.25 * width) and r[1] < (0.25 * height))) and (not (r[0] > (width - 0.25 * width) and r[1] < (0.25 * height))):
-                count += r[2] * r[3]
-                x += r[2] * r[3] * int(m['m10'] / m['m00'])
-                y += r[2] * r[3] * int(m['m01']/m['m00'])
-        return (x // count, y // count) if count > 0 else (-1, -1)
-
-    def imgCallback(self, ros_data):
-        '''
-        This Callback Runs Whenever A New Image Is Published From The Camera.
-        We Use This To Detect The Centroid Of The Path As Well As Its Colour.
-        '''
-        #### direct conversion to CV2 ####
-        np_arr = np.fromstring(ros_data.data, np.uint8)
-        image_np = cv2.imdecode(np_arr, cv2.IMREAD_COLOR) # OpenCV >= 3.0:
-        
-        # Slice Camera View
-        vertical_cut = 245
-        horizontal_cut = 75
-        width = image_np.shape[1]
-        height = image_np.shape[0] - vertical_cut
-        image_np = image_np[vertical_cut:,horizontal_cut:width-horizontal_cut, :]
-        # rospy.loginfo(image_np.shape)
-        
-        filtered_img = self.filter_yellow(image_np)
-        x, y = self.compute_centroid(filtered_img, height, width)
-        offset = (image_np.shape[1] // 2) - x
-        scale = image_np.shape[1] // 2
-        scaled_offset = offset / scale
-        self.last_readings.pop()
-        self.last_readings.append(scaled_offset)
-        if x < 0 and (sum(self.last_readings) / 10.0) < 0:
-            scaled_offset = 0.0
-        elif x < 0 and (sum(self.last_readings) / 10.0) > 0:
-            scaled_offset = 0.0
-        if abs(self.last_reading - scaled_offset) > 0.3 and scaled_offset != 0:
-            scaled_offset = self.last_reading
-        self.last_reading = scaled_offset
-        
-
-        # Id Debug Is True, Show The Center Of The Path On The Camera Feed
-        if self.debug:
-            #rospy.loginfo(f"Track Offset: {scaled_offset}")
-            msg = CompressedImage()
-            msg.header.stamp = rospy.Time.now()
-            msg.format = "jpeg"
-            rospy.loginfo(f"Centroid: {scaled_offset}")
-            msg.data = np.array(cv2.imencode('.jpg', filtered_img)[1]).tostring()
-            self.image_pub.publish(msg)
-
-        # Publish The Centroid Of The Path
-        track_msg = Float32(scaled_offset)
-        self.path_pub.publish(track_msg)
+    def img_callback(self, ros_data):
+        with self.mutex:
+            self.np_arr = np.frombuffer(ros_data.data, np.uint8)
 
     def run(self):
-        '''Run The Node'''
-        rospy.spin()
+        while not rospy.is_shutdown():
+            if self.np_arr is not None:
+                with self.mutex:
+                    image = cv2.imdecode(self.np_arr, cv2.IMREAD_COLOR)
+                height = image.shape[0]
+                width = image.shape[1]
+                crop = image[height-150:height-20,
+                       int(width/2)-200:int(width/2)+200]
+                crop_width = crop.shape[1]
+                hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
+                mask = cv2.inRange(hsv, road_mask[0], road_mask[1])
+                contours, hierarchy = cv2.findContours(mask,
+                                                       cv2.RETR_EXTERNAL,
+                                                       cv2.CHAIN_APPROX_NONE)
+                max_idx = -1
+                max_area = 0
+                centroid = -1
+
+                # Search for lane in front / find max area
+                for i in range(len(contours)):
+                    area = cv2.contourArea(contours[i])
+                    if area > max_area:
+                        max_idx = i
+                        max_area = area
+
+                if max_idx != -1:
+                    M = cv2.moments(contours[max_idx])
+                    cx = int(M['m10']/M['m00'])
+                    centroid = cx - int(crop_width/2)
+
+                self.msg.data = centroid
+                self.pub.publish(centroid)
+            else:
+                pass
+
+            self.rate.sleep()
 
 
-def main():
-    rospy.init_node('path_tracker')
-    node = LineTracker(debug=False)
+if __name__ == '__main__':
+    # create the node
+    node = Camera(node_name='camera_node')
     node.run()
-
-
-if __name__ == "__main__":
-    main()
+    # run node
+    rospy.spin()
