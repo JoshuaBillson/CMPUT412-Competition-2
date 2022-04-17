@@ -57,6 +57,7 @@ class Tag():
         # Get Location And Orientation Of Tag
         tag_t = self.locations[tag_id]
         tag_R = self.orientations[tag_id]
+        ##rospy.loginfo(f"Tag_T: {tag_t}  tag_R: {tag_R}  id: {tag_id}")
         #rospy.loginfo(f"tag_R: {tag_R}")
 
         # Find Location
@@ -64,6 +65,7 @@ class Tag():
         #rospy.loginfo(f"Location In Tag Frame: {location_in_tag_frame}")
         location_in_global_frame = tag_R.dot(location_in_tag_frame) + tag_t
         # rospy.loginfo(f"Location In Global Frame: {location_in_global_frame}")
+        #rospy.loginfo(f"Location In lobal Frame: {location_in_global_frame}")
 
         # Find Orientation
         tag_rotation = self.rotations[tag_id]
