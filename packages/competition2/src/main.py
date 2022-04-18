@@ -64,10 +64,10 @@ class State(smach.State):
         self.motor_publisher: MotorController = motor_publisher
         self.tof_tracker: TofTracker = tof_tracker
         self.left_tracker: LeftTracker = left_tracker
-        self.offset = 125
 
         # Local Variables
         self.current_tile = None
+        self.offset = 125
     
     def drive(self, angularVelocity, linearVelocity=VELOCITY):
         self.motor_publisher.drive(angularVelocity, linearVelocity)
