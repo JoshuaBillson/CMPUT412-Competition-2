@@ -49,7 +49,7 @@ class LocalizationNode(DTROS):
                                     debug=0)
      
         # Add your subsribers or publishers here
-        self.subscriber = rospy.Subscriber("/csc22912/camera_node/image/compressed", CompressedImage, self.imgCallback, queue_size=1)
+        self.subscriber = rospy.Subscriber(HOSTNAME + "/camera_node/image/compressed", CompressedImage, self.imgCallback, queue_size=1)
         self.location_publisher = rospy.Publisher(LOCATION_TOPIC, Localization, queue_size=10)
 
         # Add information about tags
