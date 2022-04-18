@@ -49,12 +49,12 @@ class LocalizationNode(DTROS):
                                     debug=0)
      
         # Add your subsribers or publishers here
-        self.subscriber = rospy.Subscriber("/csc22912/camera_node/image/compressed", CompressedImage, self.imgCallback, queue_size=1)
+        self.subscriber = rospy.Subscriber(HOSTNAME + "/camera_node/image/compressed", CompressedImage, self.imgCallback, queue_size=1)
         self.location_publisher = rospy.Publisher(LOCATION_TOPIC, Localization, queue_size=10)
 
         # Add information about tags
-        TAG_SIZE = .08
-        FAMILIES = "tagStandard41h12"
+        TAG_SIZE = .065
+        FAMILIES = "tag36h11"
         self.tags = Tag(TAG_SIZE, FAMILIES)
         self.tags.add_tag('8', 1.74, 0, 2.93, 0, math.pi / 2, 0, "generic") 
         self.tags.add_tag('13', 1.47, 0, 1.82, 0, -math.pi / 2, 0, "generic")
@@ -148,7 +148,7 @@ class LocalizationNode(DTROS):
 
                 # For Each Detected Tag, Find The Global Coordinates And Take The Average
                 for tag in tags:
-                    l, r = self.tags.estimate_pose(tag.tag_id, tag.pose_R, tag.pose_t)
+                    l, r = self.tags.estimate_pose(str(tag.tag_id), tag.pose_R, tag.pose_t)
                     distance_l = np.linalg.norm(l - self.location)
                     distance_r = np.linalg.norm(r - self.rotation)
                     if distance_r < self.discarded_readings * 15:
