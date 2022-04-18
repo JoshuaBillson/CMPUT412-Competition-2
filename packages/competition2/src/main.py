@@ -133,7 +133,7 @@ class DriveToTile(State):
                     rospy.loginfo("CHANGING TO RIGHT LANE")
                     self.motor_publisher.offset *= -1
                     self.motor_publisher.lane_changed = False
-            self.drive(self.track_line())
+            self.drive(angularVelocity=self.track_line(), linearVelocity=VELOCITY)
             self.rate.sleep()
 
         return "intersection"
