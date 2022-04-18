@@ -148,7 +148,7 @@ class LocalizationNode(DTROS):
 
                 # For Each Detected Tag, Find The Global Coordinates And Take The Average
                 for tag in tags:
-                    l, r = self.tags.estimate_pose(tag.tag_id, tag.pose_R, tag.pose_t)
+                    l, r = self.tags.estimate_pose(str(tag.tag_id), tag.pose_R, tag.pose_t)
                     distance_l = np.linalg.norm(l - self.location)
                     distance_r = np.linalg.norm(r - self.rotation)
                     if distance_r < self.discarded_readings * 15:

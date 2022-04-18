@@ -41,17 +41,15 @@ class LocalizationReader:
         self.subscriber = rospy.Subscriber(LOCATION_TOPIC, Localization, self.callback, queue_size=1)
 
     def callback(self, data):
-        rospy.loginfo("CALLBACK")
         with self.mutex:
             self.position = np.array([data.position.x, data.position.y, data.position.z])
             self.orientation = np.array([data.orientation.x, data.orientation.y, data.orientation.z])
-            self.tag = [data.tag_id.data]
+            self.tags = [data.tag_id.data]
             self.tile = data.Quadrant.data
 
-            rospy.loginfo(self.position)
-            rospy.loginfo(self.orientation)
-            rospy.loginfo(self.tag)
-            rospy.loginfo(self.tile)
+    def get_localization(self):
+        with self.mutex:
+            return self.position, self.orientation, self.tags, self.tile
    
 
 class State(smach.State):
@@ -64,6 +62,7 @@ class State(smach.State):
         self.motor_publisher: MotorController = motor_publisher
         self.tof_tracker: TofTracker = tof_tracker
         self.left_tracker: LeftTracker = left_tracker
+        self.localization_tracker: LocalizationReader = localization_tracker
 
         # Local Variables
         self.current_tile = None
@@ -80,6 +79,9 @@ class State(smach.State):
 
     def track_tof(self):
         return self.tof_tracker.get_distance()
+    
+    def get_localization(self):
+        return self.localization_tracker.get_localization()
     
     def execute(self, ud):
         raise NotImplementedError
@@ -117,6 +119,8 @@ class ChooseTile(State):
 
     def execute(self, ud):
         while not rospy.is_shutdown():
+            position, orientation, tag, tile = self.get_localization()
+            rospy.loginfo(f"Position: {position}  Orientation: {orientation}  Tile: {tile}")
             self.drive(0, 0)
             self.rate.sleep()
 
