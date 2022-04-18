@@ -35,6 +35,8 @@ class LocalizationNode(DTROS):
         self.img = None
         self.location = np.array([[0], [0], [0]])
         self.rotation = np.array([[0], [0], [0]])
+        self.past_rotations = []
+        self.discarded_readings = 0
 
         # Initialize Detector
         self.at_detector = Detector(searchpath=['apriltags'],
@@ -102,15 +104,12 @@ class LocalizationNode(DTROS):
         self.camera_intrinsic_matrix = np.array(camera_list['camera_matrix']['data']).reshape(3,3)
         self.distortion_coeff = np.array(camera_list['distortion_coefficients']['data']).reshape(5,1)
 
-
     def bounded(self, lower, upper, x):
         if x < lower:
             return lower
         elif x > upper:
             return upper
         return x
-
-
 
     def imgCallback(self, ros_data):
         '''
@@ -150,9 +149,12 @@ class LocalizationNode(DTROS):
                 # For Each Detected Tag, Find The Global Coordinates And Take The Average
                 for tag in tags:
                     l, r = self.tags.estimate_pose(tag.tag_id, tag.pose_R, tag.pose_t)
-                    location += l
-                    rotation += r
-                    count += 1
+                    distance_l = np.linalg.norm(l - self.location)
+                    distance_r = np.linalg.norm(r - self.rotation)
+                    if distance_r < self.discarded_readings * 15:
+                        location += l
+                        rotation += r
+                        count += 1
 
                 # Publish Tag ID
                 if len(tags) > 0:
@@ -160,7 +162,30 @@ class LocalizationNode(DTROS):
                     tag_id_msg = Int32(tag.tag_id)
                     msg.tag_id = tag_id_msg
 
-                # If No Tags Were Detected, The Location Does Not Change
+                # Relocalize
+                '''
+                if len(self.past_rotations) < 5:
+                    self.past_rotations.append(rotation)
+                    if len(self.past_rotations) == 5:
+                        rot = np.array([0, 0, 0])
+                        for r in self.past_rotations:
+                            rot += r
+                        self.rotation = rot / 5
+
+                # If We Have Localized, Try To Discard Anomalous Readings
+                if len(self.past_rotations) == 5:
+                    
+                    # We Onlt Got Bad Readings
+                    if count == 0 and len(tags) > 0:
+                        self.discarded_readings += 1
+                    else:
+                        self.discarded_readings = 0
+                    
+                    # If We Got At Least 5 Discarded Readings, We are Lost And Need To Relocalize
+                    if self.discarded_readings >= 5:
+                        self.past_rotations = []
+                '''
+                self.discarded_readings = self.discarded_readings + 1 if count == 0 and len(tags) else 0
                 self.location = location / count if count > 0 else self.location
                 self.rotation = rotation / count if count > 0 else self.rotation
 

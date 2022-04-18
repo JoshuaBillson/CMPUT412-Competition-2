@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
 
+class Tile:
+    def __init__(self, tag_id, neighbors, intersection=False):
+        self.id = 0
+        self.neighbors = neighbors
+        self.intersection = intersection
+
+
 class Map:
     def __init__(self):
         self.tiles = {
@@ -28,15 +35,11 @@ class Map:
             "E5": Tile("E5", ["E4", "D5"]), 
             }
 
-    def get_coords(self, tag_id):
-        return 0, 0
+    @staticmethod
+    def arrived(tile: Tile):
+        pass
     
     def set_plan(self, location, destination):
         return self.nodes[destination]
     
 
-class Tile:
-    def __init__(self, tag_id, neighbors, intersection=False):
-        self.id = 0
-        self.neighbors = neighbors
-        self.intersection = intersection

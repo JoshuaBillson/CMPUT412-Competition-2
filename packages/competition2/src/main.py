@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
 
+import numpy as np
 import os
 import rospy
 from std_msgs.msg import Int32
 from duckietown.dtros import DTROS, NodeType
 from duckietown_msgs.msg import Twist2DStamped, WheelsCmdStamped
 import smach
+from competition2.msg import Localization
 from trackers import LineTracker, TofTracker, LeftTracker
 from threading import Lock, Thread
 from graph import Map
 
 HOSTNAME = "/" + os.uname()[1]
 MOTOR_TOPIC = HOSTNAME + "/car_cmd_switch_node/cmd"
-LOCALIZATION_TOPIC = HOSTNAME + "/output/localization"
+LOCATION_TOPIC = HOSTNAME + "/output/location"
 VELOCITY = 0.40
 
 class MotorController:
@@ -30,32 +32,43 @@ class MotorController:
         self.msg.v = linearVelocity
         self.msg.omega = -(angularVelocity + self.offset)/26
         self.pub.publish(self.msg)
-        #self.rate.sleep() # Do we need this second sleep wouldn't the sleep in FollowPath handle this?  As drive is only
-                          # ever executed once, it is not in any loop?
 
-#class LocalizationReader:
-#    def __init__(self):
-#        self.x_pos = 0
-#        self.y_pos = 0
-#        self.tag_id = 0
-#        self.mutex = Lock()
-#        self.graph = MapGraph()
-#        self.subscriber = rospy.Subscriber(LOCALIZATION_TOPIC, Int32, self.callback)
-#
-#    def callback(self, data):
-#        with self.mutex:
-#            self.tag_id = data.data
-#            self.x_pos, self.y_pos = self.graph.get_coords(self.tag_id)
-    
+class LocalizationReader:
+    def __init__(self):
+        self.mutex = Lock()
+        self.position = None
+        self.orientation = None
+        self.tags = []
+        self.tile = None
+        self.subscriber = rospy.Subscriber(LOCATION_TOPIC, Localization, self.callback, queue_size=1)
+
+    def callback(self, data):
+        rospy.loginfo("CALLBACK")
+        with self.mutex:
+            self.position = np.array([data.position.x, data.position.y, data.position.z])
+            self.orientation = np.array([data.orientation.x, data.orientation.y, data.orientation.z])
+            self.tag = [data.tag_id.data]
+            self.tile = data.Quadrant.data
+
+            rospy.loginfo(self.position)
+            rospy.loginfo(self.orientation)
+            rospy.loginfo(self.tag)
+            rospy.loginfo(self.tile)
+   
 
 class State(smach.State):
-    def __init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, outcomes, input_keys=[], output_keys=[]):
+    def __init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, localization_tracker, outcomes, input_keys=[], output_keys=[]):
+        smach.State.__init__(self, outcomes=outcomes, input_keys=input_keys, output_keys=output_keys)
+
+        # Publishers And Subscribers
         self.rate = rospy.Rate(10)
         self.line_tracker: LineTracker = line_tracker
         self.motor_publisher: MotorController = motor_publisher
         self.tof_tracker: TofTracker = tof_tracker
         self.left_tracker: LeftTracker = left_tracker
-        smach.State.__init__(self, outcomes=outcomes, input_keys=input_keys, output_keys=output_keys)
+
+        # Local Variables
+        self.current_tile = None
     
     def drive(self, angularVelocity, linearVelocity=VELOCITY):
         self.motor_publisher.drive(angularVelocity, linearVelocity)
@@ -73,9 +86,9 @@ class State(smach.State):
         raise NotImplementedError
 
 
-class FollowPath(State):
-    def __init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker):
-        State.__init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, outcomes=["intersection", "obstacle"])
+class DriveToTile(State):
+    def __init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, localization_tracker):
+        State.__init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, localization_tracker, outcomes=["reached_destination"])
 
     def execute(self, ud):
         while self.track_line() == 0:
@@ -93,50 +106,20 @@ class FollowPath(State):
                 rospy.loginfo("CHANGING TO RIGHT LANE")
                 self.motor_publisher.offset *= -1
                 self.motor_publisher.lane_changed = False
-            self.drive(self.track_line())
+            #self.drive(self.track_line())
             self.rate.sleep()
 
         return "intersection"
 
 
-class ChooseIntersection(State):
-    def __init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker):
-        State.__init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, outcomes=["straight", "left", "right", "finished"])
+class ChooseTile(State):
+    def __init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, localization_tracker):
+        State.__init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, localization_tracker, outcomes=["finish", "drive_to_tile"])
 
     def execute(self, ud):
-        pass
-
-
-class TurnLeft(State):
-    def __init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker):
-        State.__init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, outcomes=["follow-path"])
-
-    def execute(self, ud):
-        pass
-
-
-class TurnRight(State):
-    def __init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker):
-        State.__init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, outcomes=["follow-path"])
-
-    def execute(self, ud):
-        pass
-
-
-class TurnStraight(State):
-    def __init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker):
-        State.__init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, outcomes=["follow-path"])
-
-    def execute(self, ud):
-        pass
-
-
-class AvoidObstacle(State):
-    def __init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker):
-        State.__init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, outcomes=["follow-path"])
-
-    def execute(self, ud):
-        pass
+        while not rospy.is_shutdown():
+            self.drive(0, 0)
+            self.rate.sleep()
 
 
 class MyPublisherNode(DTROS):
@@ -146,43 +129,15 @@ class MyPublisherNode(DTROS):
         self.line_tracker = LineTracker()
         self.tof_tracker = TofTracker()
         self.left_tracker = LeftTracker()
+        self.localization_tracker = LocalizationReader()
+        
         self.sm = smach.StateMachine(outcomes=['FINISH'])
-        #self.pub = rospy.Publisher(TOPIC, String, queue_size=10)
 
     def run(self):
-        # Open the container
+        # Add states to the container
         with self.sm:
-            # Add states to the container
-            smach.StateMachine.add('FOLLOW_PATH', FollowPath(self.motor_controller,
-                                                             self.line_tracker,
-                                                             self.tof_tracker,
-                                                             self.left_tracker),
-                                   transitions={'intersection':'CHOOSE_INTERSECTION', 'obstacle':'AVOID_OBSTACLE'})
-            smach.StateMachine.add('CHOOSE_INTERSECTION', ChooseIntersection(self.motor_controller,
-                                                                             self.line_tracker,
-                                                                             self.tof_tracker,
-                                                                             self.left_tracker),
-                                   transitions={'finished':'FINISH', "left": "LEFT", "right": "RIGHT", "straight": "STRAIGHT"})
-            smach.StateMachine.add('LEFT', TurnLeft(self.motor_controller,
-                                                    self.line_tracker,
-                                                    self.tof_tracker,
-                                                    self.left_tracker),
-                                   transitions={'follow-path':'FOLLOW_PATH'})
-            smach.StateMachine.add('RIGHT', TurnRight(self.motor_controller,
-                                                      self.line_tracker,
-                                                      self.tof_tracker,
-                                                      self.left_tracker),
-                                   transitions={'follow-path':'FOLLOW_PATH'})
-            smach.StateMachine.add('STRAIGHT', TurnStraight(self.motor_controller,
-                                                            self.line_tracker,
-                                                            self.tof_tracker,
-                                                            self.left_tracker),
-                                   transitions={'follow-path':'FOLLOW_PATH'})
-            smach.StateMachine.add('AVOID_OBSTACLE', AvoidObstacle(self.motor_controller,
-                                                                   self.line_tracker,
-                                                                   self.tof_tracker,
-                                                                   self.left_tracker),
-                                   transitions={'follow-path':'FOLLOW_PATH'})
+            smach.StateMachine.add('CHOOSE_TILE', ChooseTile(self.motor_controller, self.line_tracker, self.tof_tracker, self.left_tracker, self.localization_tracker), transitions={'finish':'FINISH', 'drive_to_tile':'DRIVE_TO_TILE'})
+            smach.StateMachine.add('DRIVE_TO_TILE', DriveToTile(self.motor_controller, self.line_tracker, self.tof_tracker, self.left_tracker, self.localization_tracker), transitions={'reached_destination':'CHOOSE_TILE'})
 
         # Execute SMACH plan
         outcome = self.sm.execute()
