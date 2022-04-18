@@ -87,7 +87,7 @@ class State(smach.State):
 
 class DriveToTile(State):
     def __init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, localization_tracker):
-        State.__init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, localization_tracker, outcomes=["reached_destination"])
+        State.__init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, localization_tracker, outcomes=["reached_destination"], input_keys=["destination"])
         self.lane_changed = False
         self.saved_ticks = 0
         self.lane_change_time = 325
@@ -113,6 +113,7 @@ class DriveToTile(State):
         return total_diff < self.tof_tolerence
 
     def execute(self, ud):
+        rospy.loginfo(f"Destination: {ud.destination}")
         while self.track_line() == 0:
             self.rate.sleep()
         while not rospy.is_shutdown():
@@ -143,14 +144,19 @@ class DriveToTile(State):
 
 class ChooseTile(State):
     def __init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, localization_tracker):
-        State.__init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, localization_tracker, outcomes=["finish", "drive_to_tile"])
+        State.__init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, localization_tracker, outcomes=["finish", "drive_to_tile"], output_keys=["destination"])
+        self.map = Map()
 
     def execute(self, ud):
-        while not rospy.is_shutdown():
+        counter = 0
+        while counter < 100:
             position, orientation, tag, tile = self.get_localization()
-            rospy.loginfo(f"Position: {position}  Orientation: {orientation}  Tile: {tile}")
+            rospy.loginfo(f"Position: {position}  Orientation: {orientation}  Tile: {tile}  Counter: {counter}")
             self.drive(0, 0)
             self.rate.sleep()
+            counter += 1
+        ud.destination = "A5"
+        return "drive_to_tile"
 
 
 class MyPublisherNode(DTROS):
