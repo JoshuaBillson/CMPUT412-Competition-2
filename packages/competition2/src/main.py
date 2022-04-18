@@ -42,13 +42,8 @@ class LocalizationReader:
         with self.mutex:
             self.position = np.array([data.position.x, data.position.y, data.position.z])
             self.orientation = np.array([data.orientation.x, data.orientation.y, data.orientation.z])
-            self.tag = [data.tag_id.data]
+            self.tags = [data.tag_id.data]
             self.tile = data.Quadrant.data
-
-            rospy.loginfo(self.position)
-            rospy.loginfo(self.orientation)
-            rospy.loginfo(self.tag)
-            rospy.loginfo(self.tile)
 
     def get_orientation(self):
         with self.mutex:
@@ -57,7 +52,11 @@ class LocalizationReader:
     def get_tile(self):
         with self.mutex:
             return self.tile
-   
+          
+    def get_localization(self):
+        with self.mutex:
+            return self.position, self.orientation, self.tags, self.tile
+          
 
 class State(smach.State):
     def __init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, localization_tracker, outcomes, input_keys=[], output_keys=[]):
@@ -69,6 +68,7 @@ class State(smach.State):
         self.motor_publisher: MotorController = motor_publisher
         self.tof_tracker: TofTracker = tof_tracker
         self.left_tracker: LeftTracker = left_tracker
+        self.localization_tracker: LocalizationReader = localization_tracker
 
         # Local Variables
         self.current_tile = None
@@ -86,13 +86,16 @@ class State(smach.State):
     def track_tof(self):
         return self.tof_tracker.get_distance()
     
+    def get_localization(self):
+        return self.localization_tracker.get_localization()
+    
     def execute(self, ud):
         raise NotImplementedError
 
 
 class DriveToTile(State):
     def __init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, localization_tracker):
-        State.__init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, localization_tracker, outcomes=["reached_destination"])
+        State.__init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, localization_tracker, outcomes=["reached_destination"], input_keys=["destination"])
         self.lane_changed = False
         self.saved_ticks = 0
         self.lane_change_time = 325
@@ -118,6 +121,7 @@ class DriveToTile(State):
         return total_diff < self.tof_tolerence
 
     def execute(self, ud):
+        rospy.loginfo(f"Destination: {ud.destination}")
         while self.track_line() == 0:
             self.rate.sleep()
         while not rospy.is_shutdown():
@@ -148,12 +152,19 @@ class DriveToTile(State):
 
 class ChooseTile(State):
     def __init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, localization_tracker):
-        State.__init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, localization_tracker, outcomes=["finish", "drive_to_tile"])
+        State.__init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, localization_tracker, outcomes=["finish", "drive_to_tile"], output_keys=["destination"])
+        self.map = Map()
 
     def execute(self, ud):
-        while not rospy.is_shutdown():
+        counter = 0
+        while counter < 10:
+            position, orientation, tag, tile = self.get_localization()
+            rospy.loginfo(f"Position: {position}  Orientation: {orientation}  Tile: {tile}  Counter: {counter}")
             self.drive(0, 0)
             self.rate.sleep()
+            counter += 1
+        ud.destination = "A5"
+        return "drive_to_tile"
 
 
 class MyPublisherNode(DTROS):
@@ -170,8 +181,8 @@ class MyPublisherNode(DTROS):
     def run(self):
         # Add states to the container
         with self.sm:
-            smach.StateMachine.add('DRIVE_TO_TILE', DriveToTile(self.motor_controller, self.line_tracker, self.tof_tracker, self.left_tracker, self.localization_tracker), transitions={'reached_destination':'CHOOSE_TILE'})
             smach.StateMachine.add('CHOOSE_TILE', ChooseTile(self.motor_controller, self.line_tracker, self.tof_tracker, self.left_tracker, self.localization_tracker), transitions={'finish':'FINISH', 'drive_to_tile':'DRIVE_TO_TILE'})
+            smach.StateMachine.add('DRIVE_TO_TILE', DriveToTile(self.motor_controller, self.line_tracker, self.tof_tracker, self.left_tracker, self.localization_tracker), transitions={'reached_destination':'CHOOSE_TILE'})
 
         # Execute SMACH plan
         outcome = self.sm.execute()
