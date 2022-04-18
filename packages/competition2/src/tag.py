@@ -70,7 +70,6 @@ class Tag():
         # Find Orientation
         tag_rotation = self.rotations[tag_id]
         rot = self.rotation_matrix_to_euler(R.transpose())
-        rospy.loginfo(f"{tag_id} {rot[1,0]}")
         rot[1,0] += tag_rotation
         rot[1,0] = ((rot[1,0] + 180) % 360) - 180
 

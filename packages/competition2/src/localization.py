@@ -35,6 +35,8 @@ class LocalizationNode(DTROS):
         self.img = None
         self.location = np.array([[0], [0], [0]])
         self.rotation = np.array([[0], [0], [0]])
+        self.past_rotations = []
+        self.discarded_readings = 0
 
         # Initialize Detector
         self.at_detector = Detector(searchpath=['apriltags'],
@@ -54,46 +56,46 @@ class LocalizationNode(DTROS):
         TAG_SIZE = .08
         FAMILIES = "tagStandard41h12"
         self.tags = Tag(TAG_SIZE, FAMILIES)
-        self.tags.add_tag(8, 1.74, 0, 2.93, 0, math.pi / 2, 0, "generic") 
-        self.tags.add_tag(13, 1.47, 0, 1.82, 0, -math.pi / 2, 0, "generic")
-        self.tags.add_tag(14, 1.22, 0, 0.635, 0, math.pi, 0, "3wayleft")
-        self.tags.add_tag(15, 2.535, 0, 0.045, 0, -math.pi / 2, 0, "generic")
-        self.tags.add_tag(21, 1.815, 0, 1.48, 0, math.pi, 0, "generic") 
-        self.tags.add_tag(22, 2.08, 0, 0.56, 0, math.pi / 2, 0, "generic")
-        self.tags.add_tag(23, 2.925, 0, 1.82, 0, 0, 0, "generic")
-        self.tags.add_tag(24, 1.12, 0, 2.93, 0, math.pi / 2, 0, "generic")
-        self.tags.add_tag(35, 1.74, 0, 1.155, 0, 0, 0, "3wayright") 
-        self.tags.add_tag(36, 0.56, 0, 2.335, 0, 0, 0, "3wayright")
-        self.tags.add_tag(37, 1.22, 0, 0.56, 0, math.pi / 2, 0, "3wayright")
-        self.tags.add_tag(38, 0.045, 0, 1.75, 0, math.pi / 2, 0, "3waytee")
-        self.tags.add_tag(44, 2.335, 0, 2.335, 0, 0, 0, "4way")
-        self.tags.add_tag(45, 2.335, 0, 1.82, 0, -math.pi / 2, 0, "4way")
-        self.tags.add_tag(46, 1.815, 0, 2.335, 0, math.pi / 2, 0, "4way")
-        self.tags.add_tag(47, 1.815, 0, 1.82, 0, math.pi, 0, "4way")
-        self.tags.add_tag(59, 0.425, 0, 2.93, 0, math.pi / 2, 0, "generic")
-        self.tags.add_tag(63, 0.56, 0, 0.56, 0, math.pi / 2, 0, "generic")
-        self.tags.add_tag(67, 0.88, 0, 1.225, 0, -math.pi / 2, 0, "generic")
-        self.tags.add_tag(75, 0.87, 0, 1.82, 0, -math.pi / 2, 0, "generic")
-        self.tags.add_tag(76, 0.045, 0, 0.605, 0, math.pi, 0, "generic")
-        self.tags.add_tag(77, 2.55, 0, 1.505, 0, math.pi, 0, "generic")
-        self.tags.add_tag(78, 1.115, 0, 1.75, 0, math.pi / 2, 0, "generic")
-        self.tags.add_tag(89, 1.815, 0, 1.155, 0, math.pi / 2, 0, "3wayright")
-        self.tags.add_tag(90, 2.925, 0, 1.155, 0, 0, 0, "3wayleft")
-        self.tags.add_tag(91, 2.335, 0, 0.635, 0, -math.pi / 2, 0, "3wayleft")
-        self.tags.add_tag(92, 1.815, 0, 0.635, 0, math.pi, 0, "3waytee")
-        self.tags.add_tag(164, 0.965, 0, 2.41, 0, -math.pi / 2, 0, "generic")
-        self.tags.add_tag(166, 2.925, 0, 0.635, 0, -math.pi / 2, 0, "3waytee")
-        self.tags.add_tag(190, 1.59, 0, 2.41, 0, 0, -math.pi / 2, "generic")
-        self.tags.add_tag(191, 0.635, 0, 0.045, 0, -math.pi / 2, 0, "generic")
-        self.tags.add_tag(192, 0.045, 0, 2.335, 0, math.pi / 2, 0, "3waytee")
-        self.tags.add_tag(205, 1.22, 0, 0.045, 0, math.pi, 0, "3waytee")
-        self.tags.add_tag(206, 1.74, 0, 0.045, 0, -math.pi / 2, 0, "3wayleft")
-        self.tags.add_tag(207, 1.22, 0, 1.155, 0, math.pi / 2, 0, "3waytee")
-        self.tags.add_tag(226, 0.045, 0, 1.82, 0, math.pi, 0, "3wayleft")
-        self.tags.add_tag(227, 0.045, 0, 1.225, 0, math.pi, 0, "3wayleft")
-        self.tags.add_tag(228, 0.56, 0, 1.75, 0, 0, 0, "3wayright")
-        self.tags.add_tag(303, 2.415, 0, 0.635, 0, math.pi, 0, "3wayright")
-        self.tags.add_tag(304, 1.155, 0, 2.335, 0, math.pi / 2, 0, "generic")
+        self.tags.add_tag('8', 1.74, 0, 2.93, 0, math.pi / 2, 0, "generic") 
+        self.tags.add_tag('13', 1.47, 0, 1.82, 0, -math.pi / 2, 0, "generic")
+        self.tags.add_tag('14', 1.22, 0, 0.635, 0, math.pi, 0, "3wayleft")
+        self.tags.add_tag('15', 2.535, 0, 0.045, 0, -math.pi / 2, 0, "generic")
+        self.tags.add_tag('21', 1.815, 0, 1.48, 0, math.pi, 0, "generic") 
+        self.tags.add_tag('22', 2.08, 0, 0.56, 0, math.pi / 2, 0, "generic")
+        self.tags.add_tag('23', 2.925, 0, 1.82, 0, 0, 0, "generic")
+        self.tags.add_tag('24', 1.12, 0, 2.93, 0, math.pi / 2, 0, "generic")
+        self.tags.add_tag('35', 1.74, 0, 1.155, 0, 0, 0, "3wayright") 
+        self.tags.add_tag('36', 0.56, 0, 2.335, 0, 0, 0, "3wayright")
+        self.tags.add_tag('37', 1.22, 0, 0.56, 0, math.pi / 2, 0, "3wayright")
+        self.tags.add_tag('38', 0.045, 0, 1.75, 0, math.pi / 2, 0, "3waytee")
+        self.tags.add_tag('44', 2.335, 0, 2.335, 0, 0, 0, "4way")
+        self.tags.add_tag('45', 2.335, 0, 1.82, 0, -math.pi / 2, 0, "4way")
+        self.tags.add_tag('46', 1.815, 0, 2.335, 0, math.pi / 2, 0, "4way")
+        self.tags.add_tag('47', 1.815, 0, 1.82, 0, math.pi, 0, "4way")
+        self.tags.add_tag('59', 0.425, 0, 2.93, 0, math.pi / 2, 0, "generic")
+        self.tags.add_tag('63', 0.56, 0, 0.56, 0, math.pi / 2, 0, "generic")
+        self.tags.add_tag('67', 0.88, 0, 1.225, 0, -math.pi / 2, 0, "generic")
+        self.tags.add_tag('75', 0.87, 0, 1.82, 0, -math.pi / 2, 0, "generic")
+        self.tags.add_tag('76', 0.045, 0, 0.605, 0, math.pi, 0, "generic")
+        self.tags.add_tag('77', 2.55, 0, 1.505, 0, math.pi, 0, "generic")
+        self.tags.add_tag('78', 1.115, 0, 1.75, 0, math.pi / 2, 0, "generic")
+        self.tags.add_tag('89', 1.815, 0, 1.155, 0, math.pi / 2, 0, "3wayright")
+        self.tags.add_tag('90', 2.925, 0, 1.155, 0, 0, 0, "3wayleft")
+        self.tags.add_tag('91', 2.335, 0, 0.635, 0, -math.pi / 2, 0, "3wayleft")
+        self.tags.add_tag('92', 1.815, 0, 0.635, 0, math.pi, 0, "3waytee")
+        self.tags.add_tag('164', 0.965, 0, 2.41, 0, -math.pi / 2, 0, "generic")
+        self.tags.add_tag('166', 2.925, 0, 0.635, 0, -math.pi / 2, 0, "3waytee")
+        self.tags.add_tag('190', 1.59, 0, 2.41, 0, -math.pi / 2, 0, "generic")
+        self.tags.add_tag('191', 0.635, 0, 0.045, 0, -math.pi / 2, 0, "generic")
+        self.tags.add_tag('192', 0.045, 0, 2.335, 0, math.pi / 2, 0, "3waytee")
+        self.tags.add_tag('205', 1.22, 0, 0.045, 0, math.pi, 0, "3waytee")
+        self.tags.add_tag('206', 1.74, 0, 0.045, 0, -math.pi / 2, 0, "3wayleft")
+        self.tags.add_tag('207', 1.22, 0, 1.155, 0, math.pi / 2, 0, "3waytee")
+        self.tags.add_tag('226', 0.045, 0, 1.82, 0, math.pi, 0, "3wayleft")
+        self.tags.add_tag('227', 0.045, 0, 1.225, 0, math.pi, 0, "3wayleft")
+        self.tags.add_tag('228', 0.56, 0, 1.75, 0, 0, 0, "3wayright")
+        self.tags.add_tag('303', 2.415, 0, 0.635, 0, math.pi, 0, "3wayright")
+        self.tags.add_tag('304', 1.155, 0, 2.335, 0, math.pi / 2, 0, "generic")
 
         # Load camera parameters
         with open("/data/config/calibrations/camera_intrinsic/" + os.uname()[1] + ".yaml") as file:
@@ -101,7 +103,14 @@ class LocalizationNode(DTROS):
 
         self.camera_intrinsic_matrix = np.array(camera_list['camera_matrix']['data']).reshape(3,3)
         self.distortion_coeff = np.array(camera_list['distortion_coefficients']['data']).reshape(5,1)
-    
+
+    def bounded(self, lower, upper, x):
+        if x < lower:
+            return lower
+        elif x > upper:
+            return upper
+        return x
+
     def imgCallback(self, ros_data):
         '''
         This Callback Runs Whenever A New Image Is Published From The Camera.
@@ -114,22 +123,21 @@ class LocalizationNode(DTROS):
 
     def detect_loop(self):
         """Loop To Detect Location From Current Camera Image"""
-        rate = rospy.Rate(5)
+        rate = rospy.Rate(10)
         while not rospy.is_shutdown():
             
             msg = Localization()
             # Copy The Camera Image
             if self.img is not None:
                 with self.mutex:
-                    img = np.copy(self.img)
+                    undistorted_image = self.undistort(self.img)
             else:
-                img = None
+                undistorted_image = None
         
             # Process Image
-            if img is not None:
+            if undistorted_image is not None:
 
                 # Prepare Image For Processing
-                undistorted_image = self.undistort(img)
                 grayscale_image = cv2.cvtColor(undistorted_image, cv2.COLOR_BGR2GRAY)
 
                 # Detect Tags
@@ -141,9 +149,12 @@ class LocalizationNode(DTROS):
                 # For Each Detected Tag, Find The Global Coordinates And Take The Average
                 for tag in tags:
                     l, r = self.tags.estimate_pose(tag.tag_id, tag.pose_R, tag.pose_t)
-                    location += l
-                    rotation += r
-                    count += 1
+                    distance_l = np.linalg.norm(l - self.location)
+                    distance_r = np.linalg.norm(r - self.rotation)
+                    if distance_r < self.discarded_readings * 15:
+                        location += l
+                        rotation += r
+                        count += 1
 
                 # Publish Tag ID
                 if len(tags) > 0:
@@ -151,7 +162,30 @@ class LocalizationNode(DTROS):
                     tag_id_msg = Int32(tag.tag_id)
                     msg.tag_id = tag_id_msg
 
-                # If No Tags Were Detected, The Location Does Not Change
+                # Relocalize
+                '''
+                if len(self.past_rotations) < 5:
+                    self.past_rotations.append(rotation)
+                    if len(self.past_rotations) == 5:
+                        rot = np.array([0, 0, 0])
+                        for r in self.past_rotations:
+                            rot += r
+                        self.rotation = rot / 5
+
+                # If We Have Localized, Try To Discard Anomalous Readings
+                if len(self.past_rotations) == 5:
+                    
+                    # We Onlt Got Bad Readings
+                    if count == 0 and len(tags) > 0:
+                        self.discarded_readings += 1
+                    else:
+                        self.discarded_readings = 0
+                    
+                    # If We Got At Least 5 Discarded Readings, We are Lost And Need To Relocalize
+                    if self.discarded_readings >= 5:
+                        self.past_rotations = []
+                '''
+                self.discarded_readings = self.discarded_readings + 1 if count == 0 and len(tags) else 0
                 self.location = location / count if count > 0 else self.location
                 self.rotation = rotation / count if count > 0 else self.rotation
 
@@ -171,10 +205,10 @@ class LocalizationNode(DTROS):
 
             # Publish current tile location
             tile_msg = String()
-            xgrid = math.ceil(round(self.location[0,0],1)/0.6)
-            zgrid = math.floor(round(self.location[2,0],1)/0.6)
+            xgrid = math.ceil(self.location[0,0]/0.594)
+            zgrid = math.floor(self.location[2,0]/0.594)
             gridletters = ['E','D','C','B','A']
-            zgrid_corr = gridletters[zgrid]
+            zgrid_corr = gridletters[self.bounded(0, 4, zgrid)]
             current_tile = f"{zgrid_corr}{xgrid}"
             tile_msg = String(current_tile)
             msg.Quadrant = tile_msg
