@@ -83,7 +83,7 @@ class LocalizationNode(DTROS):
         self.tags.add_tag(92, 1.815, 0, 0.635, 0, math.pi, 0, "3waytee")
         self.tags.add_tag(164, 0.965, 0, 2.41, 0, -math.pi / 2, 0, "generic")
         self.tags.add_tag(166, 2.925, 0, 0.635, 0, -math.pi / 2, 0, "3waytee")
-        self.tags.add_tag(190, 1.59, 0, 2.41, 0, 0, -math.pi / 2, "generic")
+        self.tags.add_tag(190, 1.59, 0, 2.41, 0, -math.pi / 2, 0, "generic")
         self.tags.add_tag(191, 0.635, 0, 0.045, 0, -math.pi / 2, 0, "generic")
         self.tags.add_tag(192, 0.045, 0, 2.335, 0, math.pi / 2, 0, "3waytee")
         self.tags.add_tag(205, 1.22, 0, 0.045, 0, math.pi, 0, "3waytee")
@@ -101,7 +101,17 @@ class LocalizationNode(DTROS):
 
         self.camera_intrinsic_matrix = np.array(camera_list['camera_matrix']['data']).reshape(3,3)
         self.distortion_coeff = np.array(camera_list['distortion_coefficients']['data']).reshape(5,1)
-    
+
+
+    def bounded(self, lower, upper, x):
+        if x < lower:
+            return lower
+        elif x > upper:
+            return upper
+        return x
+
+
+
     def imgCallback(self, ros_data):
         '''
         This Callback Runs Whenever A New Image Is Published From The Camera.
@@ -114,22 +124,21 @@ class LocalizationNode(DTROS):
 
     def detect_loop(self):
         """Loop To Detect Location From Current Camera Image"""
-        rate = rospy.Rate(5)
+        rate = rospy.Rate(10)
         while not rospy.is_shutdown():
             
             msg = Localization()
             # Copy The Camera Image
             if self.img is not None:
                 with self.mutex:
-                    img = np.copy(self.img)
+                    undistorted_image = self.undistort(self.img)
             else:
-                img = None
+                undistorted_image = None
         
             # Process Image
-            if img is not None:
+            if undistorted_image is not None:
 
                 # Prepare Image For Processing
-                undistorted_image = self.undistort(img)
                 grayscale_image = cv2.cvtColor(undistorted_image, cv2.COLOR_BGR2GRAY)
 
                 # Detect Tags
@@ -174,7 +183,7 @@ class LocalizationNode(DTROS):
             xgrid = math.ceil(round(self.location[0,0],1)/0.6)
             zgrid = math.floor(round(self.location[2,0],1)/0.6)
             gridletters = ['E','D','C','B','A']
-            zgrid_corr = gridletters[zgrid]
+            zgrid_corr = gridletters[self.bounded(0, 4, zgrid)]
             current_tile = f"{zgrid_corr}{xgrid}"
             tile_msg = String(current_tile)
             msg.Quadrant = tile_msg

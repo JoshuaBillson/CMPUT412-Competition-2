@@ -8,7 +8,7 @@ from duckietown_msgs.msg import Twist2DStamped, WheelsCmdStamped
 import smach
 from trackers import LineTracker, TofTracker, LeftTracker
 from threading import Lock, Thread
-from graph import MapGraph
+from graph import Map
 
 HOSTNAME = "/" + os.uname()[1]
 MOTOR_TOPIC = HOSTNAME + "/car_cmd_switch_node/cmd"

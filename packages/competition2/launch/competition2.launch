@@ -1,6 +1,6 @@
 <launch>
 
-  <!--<node pkg="competition2" type="main.py" name="lab5_main" output="screen"/>-->
+  <node pkg="competition2" type="main.py" name="lab5_main" output="screen"/>
   <node pkg="competition2" type="track_line.py" name="line_tracker" output="screen"/>
   <node pkg="competition2" type="localization.py" name="lab5_localization" output="screen"/>
 
