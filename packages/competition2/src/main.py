@@ -11,19 +11,17 @@ from competition2.msg import Localization
 from trackers import LineTracker, TofTracker, LeftTracker
 from threading import Lock, Thread
 from graph import Map
+from collections import deque
 
 HOSTNAME = "/" + os.uname()[1]
 MOTOR_TOPIC = HOSTNAME + "/car_cmd_switch_node/cmd"
 LOCATION_TOPIC = HOSTNAME + "/output/location"
 VELOCITY = 0.40
+MAX_TOF_QUEUE = 5
 
 class MotorController:
     def __init__(self):
         self.pub = rospy.Publisher(MOTOR_TOPIC, Twist2DStamped, queue_size=1)
-        self.lane_changed = False
-        self.saved_ticks = 0
-        self.lane_change_time = 325
-        self.min_distance = 0.27
         self.msg = Twist2DStamped()
 
     def drive(self, angularVelocity, linearVelocity):
@@ -90,24 +88,54 @@ class State(smach.State):
 class DriveToTile(State):
     def __init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, localization_tracker):
         State.__init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, localization_tracker, outcomes=["reached_destination"])
+        self.lane_changed = False
+        self.saved_ticks = 0
+        self.lane_change_time = 325
+        self.min_distance = 0.27
+        self.tof_history = deque(maxlen=MAX_TOF_QUEUE)
+        self.prev_distance = 0
+        self.tof_tolerence = 0.75
+        
+    def is_box_infront(self):
+        if len([i for i in self.tof_history]) < MAX_TOF_QUEUE:
+            return False
+        total_diff = 0
+        current_val = self.tof_history.popleft()
+        for i in range(MAX_TOF_QUEUE-1):
+            rospy.loginfo("QUEUE {}: = {}".format(i, current_val))
+            second_val = self.tof_history.popleft()
+            total_diff += current_val-second_val
+            current_val = second_val
+        if total_diff <= 0:
+            return False
+
+        rospy.loginfo("TOT. QUEUE DIFF: {}".format(total_diff))
+        return total_diff < self.tof_tolerence
 
     def execute(self, ud):
         while self.track_line() == 0:
             self.rate.sleep()
         while not rospy.is_shutdown():
+            # Put current tof into queue
+            distance = self.tof_tracker.get_distance()
+            if distance != self.prev_distance:
+                self.tof_history.append(distance)
+            self.prev_distance = distance
+
             #  If box in front, switch lanes and save current wheel encoder
-            if self.tof_tracker.get_distance() < self.motor_publisher.min_distance and self.motor_publisher.lane_changed is False:
-                self.motor_publisher.saved_ticks = self.left_tracker.get_left_ticks()
-                self.motor_publisher.offset *= -1
-                self.motor_publisher.lane_changed = True
-                rospy.loginfo("CHANGING TO LEFT LANE")
+            if distance < self.min_dist and self.lane_changed is False:
+                if self.is_box_infront():
+                    self.saved_ticks = self.left_tracker.get_left_ticks()
+                    self.offset *= -1
+                    self.lane_changed = True
+                    rospy.loginfo("CHANGING TO LEFT LANE")
 
             # Drive for a little bit then switch back lanes
-            if self.left_tracker.get_left_ticks() > (self.motor_publisher.saved_ticks + self.motor_publisher.lane_change_time) and self.motor_publisher.lane_changed is True:
+            if self.left_tracker.get_left_ticks() > (self.saved_ticks + self.lane_change_time) and self.lane_changed:
                 rospy.loginfo("CHANGING TO RIGHT LANE")
                 self.motor_publisher.offset *= -1
                 self.motor_publisher.lane_changed = False
-            #self.drive(self.track_line())
+            self.drive(angularVelocity=self.track_line(), linearVelocity=VELOCITY)
             self.rate.sleep()
 
         return "intersection"
