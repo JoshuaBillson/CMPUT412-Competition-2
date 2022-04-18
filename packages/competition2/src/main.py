@@ -45,10 +45,18 @@ class LocalizationReader:
             self.tags = [data.tag_id.data]
             self.tile = data.Quadrant.data
 
+    def get_orientation(self):
+        with self.mutex:
+            return self.orientation
+
+    def get_tile(self):
+        with self.mutex:
+            return self.tile
+          
     def get_localization(self):
         with self.mutex:
             return self.position, self.orientation, self.tags, self.tile
-   
+          
 
 class State(smach.State):
     def __init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, localization_tracker, outcomes, input_keys=[], output_keys=[]):
@@ -91,7 +99,7 @@ class DriveToTile(State):
         self.lane_changed = False
         self.saved_ticks = 0
         self.lane_change_time = 325
-        self.min_distance = 0.27
+        self.min_dist = 0.27
         self.tof_history = deque(maxlen=MAX_TOF_QUEUE)
         self.prev_distance = 0
         self.tof_tolerence = 0.75
@@ -134,8 +142,8 @@ class DriveToTile(State):
             # Drive for a little bit then switch back lanes
             if self.left_tracker.get_left_ticks() > (self.saved_ticks + self.lane_change_time) and self.lane_changed:
                 rospy.loginfo("CHANGING TO RIGHT LANE")
-                self.motor_publisher.offset *= -1
-                self.motor_publisher.lane_changed = False
+                self.offset *= -1
+                self.lane_changed = False
             self.drive(angularVelocity=self.track_line(), linearVelocity=VELOCITY)
             self.rate.sleep()
 
@@ -149,7 +157,7 @@ class ChooseTile(State):
 
     def execute(self, ud):
         counter = 0
-        while counter < 100:
+        while counter < 10:
             position, orientation, tag, tile = self.get_localization()
             rospy.loginfo(f"Position: {position}  Orientation: {orientation}  Tile: {tile}  Counter: {counter}")
             self.drive(0, 0)
