@@ -20,8 +20,6 @@ VELOCITY = 0.40
 class MotorController:
     def __init__(self):
         self.pub = rospy.Publisher(MOTOR_TOPIC, Twist2DStamped, queue_size=1)
-        #self.rate = rospy.Rate(30)
-        self.offset = 100
         self.lane_changed = False
         self.saved_ticks = 0
         self.lane_change_time = 325
@@ -30,7 +28,7 @@ class MotorController:
 
     def drive(self, angularVelocity, linearVelocity):
         self.msg.v = linearVelocity
-        self.msg.omega = -(angularVelocity + self.offset)/26
+        self.msg.omega = angularVelocity
         self.pub.publish(self.msg)
 
 class LocalizationReader:
@@ -66,6 +64,7 @@ class State(smach.State):
         self.motor_publisher: MotorController = motor_publisher
         self.tof_tracker: TofTracker = tof_tracker
         self.left_tracker: LeftTracker = left_tracker
+        self.offset = 125
 
         # Local Variables
         self.current_tile = None
@@ -77,7 +76,7 @@ class State(smach.State):
         self.motor_publisher.drive(0, 0)
     
     def track_line(self):
-        return self.line_tracker.get_line()
+        return -(self.line_tracker.get_line() + self.offset) / 26
 
     def track_tof(self):
         return self.tof_tracker.get_distance()
