@@ -39,7 +39,6 @@ class LocalizationReader:
         self.subscriber = rospy.Subscriber(LOCATION_TOPIC, Localization, self.callback, queue_size=1)
 
     def callback(self, data):
-        rospy.loginfo("CALLBACK")
         with self.mutex:
             self.position = np.array([data.position.x, data.position.y, data.position.z])
             self.orientation = np.array([data.orientation.x, data.orientation.y, data.orientation.z])
@@ -50,6 +49,14 @@ class LocalizationReader:
             rospy.loginfo(self.orientation)
             rospy.loginfo(self.tag)
             rospy.loginfo(self.tile)
+
+    def get_orientation(self):
+        with self.mutex:
+            return self.orientation
+
+    def get_tile(self):
+        with self.mutex:
+            return self.tile
    
 
 class State(smach.State):
@@ -89,7 +96,7 @@ class DriveToTile(State):
         self.lane_changed = False
         self.saved_ticks = 0
         self.lane_change_time = 325
-        self.min_distance = 0.27
+        self.min_dist = 0.27
         self.tof_history = deque(maxlen=MAX_TOF_QUEUE)
         self.prev_distance = 0
         self.tof_tolerence = 0.75
@@ -163,8 +170,8 @@ class MyPublisherNode(DTROS):
     def run(self):
         # Add states to the container
         with self.sm:
-            smach.StateMachine.add('CHOOSE_TILE', ChooseTile(self.motor_controller, self.line_tracker, self.tof_tracker, self.left_tracker, self.localization_tracker), transitions={'finish':'FINISH', 'drive_to_tile':'DRIVE_TO_TILE'})
             smach.StateMachine.add('DRIVE_TO_TILE', DriveToTile(self.motor_controller, self.line_tracker, self.tof_tracker, self.left_tracker, self.localization_tracker), transitions={'reached_destination':'CHOOSE_TILE'})
+            smach.StateMachine.add('CHOOSE_TILE', ChooseTile(self.motor_controller, self.line_tracker, self.tof_tracker, self.left_tracker, self.localization_tracker), transitions={'finish':'FINISH', 'drive_to_tile':'DRIVE_TO_TILE'})
 
         # Execute SMACH plan
         outcome = self.sm.execute()
