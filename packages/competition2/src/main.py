@@ -89,13 +89,16 @@ class FollowPath(State):
         total_diff = 0
         current_val = self.tof_history.popleft()
         for i in range(MAX_TOF_QUEUE-1):
+            rospy.loginfo("QUEUE {}: = {}".format(i, current_val))
             second_val = self.tof_history.popleft()
             total_diff += current_val-second_val
             current_val = second_val
         if total_diff < 0:
-            return 999
-        else:
-            return total_diff
+            total_diff = 999
+
+        rospy.loginfo("TOT. QUEUE DIFF: {}".format(total_diff))
+        return total_diff
+
 
     def execute(self, ud):
         while self.track_line() == 0:
@@ -106,11 +109,12 @@ class FollowPath(State):
             self.tof_history.append(distance)
 
             #  If box in front, switch lanes and save current wheel encoder
-            if distance < self.min_dist and self.lane_changed is False and self.calc_queuediff() < self.tof_tolerance:
-                self.saved_ticks = self.left_tracker.get_left_ticks()
-                self.motor_publisher.offset *= -1
-                self.lane_changed = True
-                rospy.loginfo("CHANGING TO LEFT LANE")
+            if distance < self.min_dist and self.lane_changed is False:
+                if self.calc_queuediff() < self.tof_tolerance:
+                    self.saved_ticks = self.left_tracker.get_left_ticks()
+                    self.motor_publisher.offset *= -1
+                    self.lane_changed = True
+                    rospy.loginfo("CHANGING TO LEFT LANE")
 
             # Drive for a little bit then switch back lanes
             if self.left_tracker.get_left_ticks() > (self.saved_ticks + self.lane_change_time) and self.lane_changed is True:
