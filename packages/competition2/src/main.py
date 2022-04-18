@@ -96,7 +96,7 @@ class DriveToTile(State):
         
     def is_box_infront(self):
         if len([i for i in self.tof_history]) < MAX_TOF_QUEUE:
-            False
+            return False
         total_diff = 0
         current_val = self.tof_history.popleft()
         for i in range(MAX_TOF_QUEUE-1):
@@ -104,8 +104,8 @@ class DriveToTile(State):
             second_val = self.tof_history.popleft()
             total_diff += current_val-second_val
             current_val = second_val
-        if total_diff < 0:
-            total_diff = False
+        if total_diff <= 0:
+            return False
 
         rospy.loginfo("TOT. QUEUE DIFF: {}".format(total_diff))
         return total_diff < self.tof_tolerence
