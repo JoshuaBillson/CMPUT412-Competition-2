@@ -138,8 +138,8 @@ class DriveToTile(State):
             # Drive for a little bit then switch back lanes
             if self.left_tracker.get_left_ticks() > (self.saved_ticks + self.lane_change_time) and self.lane_changed:
                 rospy.loginfo("CHANGING TO RIGHT LANE")
-                self.motor_publisher.offset *= -1
-                self.motor_publisher.lane_changed = False
+                self.offset *= -1
+                self.lane_changed = False
             self.drive(angularVelocity=self.track_line(), linearVelocity=VELOCITY)
             self.rate.sleep()
 
