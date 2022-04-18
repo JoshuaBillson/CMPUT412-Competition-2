@@ -11,23 +11,31 @@ from threading import Lock, Thread
 from graph import Map
 from collections import deque
 
-HOSTNAME = "/" + os.uname()[1]
+HOSTNAME = "/" + os.environ['DUCKNAME']
 MOTOR_TOPIC = HOSTNAME + "/car_cmd_switch_node/cmd"
 LOCALIZATION_TOPIC = HOSTNAME + "/output/localization"
-VELOCITY = 0.40
+VELOCITY = 0.35
 MAX_TOF_QUEUE = 5
 
 class MotorController:
     def __init__(self):
         self.pub = rospy.Publisher(MOTOR_TOPIC, Twist2DStamped, queue_size=1)
+        print(MOTOR_TOPIC)
         #self.rate = rospy.Rate(30)
-        self.offset = 100
+        self.offset = 125
 
         self.msg = Twist2DStamped()
 
     def drive(self, angularVelocity, linearVelocity):
         self.msg.v = linearVelocity
-        self.msg.omega = -(angularVelocity + self.offset)/26
+        omega = -(angularVelocity + self.offset)/26
+        if omega > 7:
+            omega = 7
+        if omega < -7:
+            omega = -7
+
+        self.msg.omega = omega
+
         self.pub.publish(self.msg)
         #self.rate.sleep() # Do we need this second sleep wouldn't the sleep in FollowPath handle this?  As drive is only
                           # ever executed once, it is not in any loop?
@@ -49,7 +57,7 @@ class MotorController:
 
 class State(smach.State):
     def __init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, outcomes, input_keys=[], output_keys=[]):
-        self.rate = rospy.Rate(10)
+        self.rate = rospy.Rate(60)
         self.line_tracker: LineTracker = line_tracker
         self.motor_publisher: MotorController = motor_publisher
         self.tof_tracker: TofTracker = tof_tracker
@@ -75,11 +83,11 @@ class State(smach.State):
 class FollowPath(State):
     def __init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker):
         self.tof_history = deque(maxlen=MAX_TOF_QUEUE)
-        self.min_dist = 0.30
+        self.min_dist = 0.275
         self.lane_changed = False
         self.saved_ticks = 0
         self.lane_change_time = 325
-        self.tof_tolerance = 1
+        self.tof_tolerance = 0.3
 
         State.__init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, outcomes=["intersection", "obstacle"])
 
@@ -93,7 +101,7 @@ class FollowPath(State):
             second_val = self.tof_history.popleft()
             total_diff += current_val-second_val
             current_val = second_val
-        if total_diff < 0:
+        if total_diff <= 0:
             total_diff = 999
 
         rospy.loginfo("TOT. QUEUE DIFF: {}".format(total_diff))
@@ -120,7 +128,7 @@ class FollowPath(State):
             if self.left_tracker.get_left_ticks() > (self.saved_ticks + self.lane_change_time) and self.lane_changed is True:
                 rospy.loginfo("CHANGING TO RIGHT LANE")
                 self.motor_publisher.offset *= -1
-                self.motor_publisher.lane_changed = False
+                self.lane_changed = False
             self.drive(self.track_line())
             self.rate.sleep()
 

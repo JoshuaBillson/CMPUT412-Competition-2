@@ -9,7 +9,7 @@ import os
 from threading import Lock
 
 road_mask = [(20,60,0), (50,255,255)]
-HOSTNAME = "/" + os.uname()[1]
+HOSTNAME = "/" + os.environ['DUCKNAME']
 
 class Camera(DTROS):
     def __init__(self, node_name):

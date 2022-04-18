@@ -6,7 +6,7 @@ from duckietown_msgs.msg import WheelEncoderStamped
 
 import os
 
-HOSTNAME = os.uname()[1]
+HOSTNAME = os.environ['DUCKNAME']
 LINE_TRACKER_TOPIC = "/output/line_tracker"
 TOF_TRACKER_TOPIC = HOSTNAME + "/front_center_tof_driver_node/range"
 LEFT_TRACKER_TOPIC = HOSTNAME + "/left_wheel_encoder_node/tick"

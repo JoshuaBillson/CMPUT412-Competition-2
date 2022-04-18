@@ -19,7 +19,7 @@ from dt_apriltags import Detector
 from duckietown.dtros import DTROS, NodeType
 
 
-HOSTNAME = "/" + os.uname()[1]
+HOSTNAME = "/" + os.environ['DUCKNAME']
 LOCATION_TOPIC = HOSTNAME + "/output/location"
 
 
@@ -47,7 +47,7 @@ class LocalizationNode(DTROS):
                                     debug=0)
      
         # Add your subsribers or publishers here
-        self.subscriber = rospy.Subscriber("/csc22912/camera_node/image/compressed", CompressedImage, self.imgCallback, queue_size=1)
+        self.subscriber = rospy.Subscriber(HOSTNAME + "/camera_node/image/compressed", CompressedImage, self.imgCallback, queue_size=1)
         self.location_publisher = rospy.Publisher(LOCATION_TOPIC, Localization, queue_size=10)
 
         # Add information about tags
@@ -96,7 +96,7 @@ class LocalizationNode(DTROS):
         self.tags.add_tag(304, 1.155, 0, 2.335, 0, math.pi / 2, 0, "generic")
 
         # Load camera parameters
-        with open("/data/config/calibrations/camera_intrinsic/" + os.uname()[1] + ".yaml") as file:
+        with open("/code/catkin_ws/src/CMPUT412-Competition-2/packages/competition2/src/" + os.environ['DUCKNAME'] + ".yaml") as file:
                 camera_list = yaml.load(file,Loader = yaml.FullLoader)
 
         self.camera_intrinsic_matrix = np.array(camera_list['camera_matrix']['data']).reshape(3,3)
@@ -119,7 +119,7 @@ class LocalizationNode(DTROS):
         '''
         #### direct conversion to CV2 ####
         with self.mutex:
-            np_arr = np.fromstring(ros_data.data, np.uint8)
+            np_arr = np.frombuffer(ros_data.data, np.uint8)
             self.img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR) # OpenCV >= 3.0:
 
     def detect_loop(self):
