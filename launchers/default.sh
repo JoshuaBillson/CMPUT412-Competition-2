@@ -14,8 +14,8 @@ dt-launchfile-init
 
 # launching app
 export DUCKNAME="ducktales"
-export ROS_MASTER_URI=http://192.168.0.102:11311/
-export ROS_IP=192.168.0.141
+#export ROS_MASTER_URI=http://192.168.0.102:11311/
+#export ROS_IP=192.168.0.141
 dt-exec roslaunch competition2 competition2.launch
 
 # ----------------------------------------------------------------------------

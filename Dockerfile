@@ -45,8 +45,9 @@ ENV DT_MAINTAINER "${MAINTAINER}"
 ENV DT_REPO_PATH "${REPO_PATH}"
 ENV DT_LAUNCH_PATH "${LAUNCH_PATH}"
 ENV DT_LAUNCHER "${LAUNCHER}"
-ENV ROS_MASTER_URI "http://192.168.0.102:11311/"
+ENV ROS_MASTER_URI "http://ducktales.local:11311/"
 ENV ROS_IP "192.168.0.141"
+ENV DUCKNAME "ducktales"
 
 # install apt dependencies
 COPY ./dependencies-apt.txt "${REPO_PATH}/"

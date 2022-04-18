@@ -10,6 +10,7 @@ from trackers import LineTracker, TofTracker, LeftTracker
 from threading import Lock, Thread
 from graph import Map
 from collections import deque
+import time
 
 HOSTNAME = "/" + os.environ['DUCKNAME']
 MOTOR_TOPIC = HOSTNAME + "/car_cmd_switch_node/cmd"
@@ -19,6 +20,7 @@ MAX_TOF_QUEUE = 5
 
 class MotorController:
     def __init__(self):
+        time.sleep(5)
         self.pub = rospy.Publisher(MOTOR_TOPIC, Twist2DStamped, queue_size=1)
         print(MOTOR_TOPIC)
         #self.rate = rospy.Rate(30)
@@ -27,6 +29,7 @@ class MotorController:
         self.msg = Twist2DStamped()
 
     def drive(self, angularVelocity, linearVelocity):
+        print("DRIVING", MOTOR_TOPIC)
         self.msg.v = linearVelocity
         omega = -(angularVelocity + self.offset)/26
         if omega > 7:
@@ -57,7 +60,8 @@ class MotorController:
 
 class State(smach.State):
     def __init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, outcomes, input_keys=[], output_keys=[]):
-        self.rate = rospy.Rate(60)
+        time.sleep(5)
+        self.rate = rospy.Rate(30)
         self.line_tracker: LineTracker = line_tracker
         self.motor_publisher: MotorController = motor_publisher
         self.tof_tracker: TofTracker = tof_tracker
@@ -82,6 +86,8 @@ class State(smach.State):
 
 class FollowPath(State):
     def __init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker):
+        time.sleep(5)
+        print("CREATING FOLLOW PATH")
         self.tof_history = deque(maxlen=MAX_TOF_QUEUE)
         self.min_dist = 0.275
         self.lane_changed = False
@@ -109,6 +115,7 @@ class FollowPath(State):
 
 
     def execute(self, ud):
+        print("RUNNING FOLLOW PATH")
         while self.track_line() == 0:
             self.rate.sleep()
         while not rospy.is_shutdown():
@@ -177,6 +184,7 @@ class AvoidObstacle(State):
 
 class MyPublisherNode(DTROS):
     def __init__(self, node_name):
+        time.sleep(1)
         super(MyPublisherNode, self).__init__(node_name=node_name, node_type=NodeType.GENERIC)
         self.motor_controller = MotorController()
         self.line_tracker = LineTracker()
@@ -189,6 +197,8 @@ class MyPublisherNode(DTROS):
         # Open the container
         with self.sm:
             # Add states to the container
+            print("CREATING SM")
+            time.sleep(5)
             smach.StateMachine.add('FOLLOW_PATH', FollowPath(self.motor_controller,
                                                              self.line_tracker,
                                                              self.tof_tracker,
