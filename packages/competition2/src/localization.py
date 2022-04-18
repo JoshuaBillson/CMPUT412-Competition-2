@@ -180,8 +180,8 @@ class LocalizationNode(DTROS):
 
             # Publish current tile location
             tile_msg = String()
-            xgrid = math.ceil(round(self.location[0,0],1)/0.6)
-            zgrid = math.floor(round(self.location[2,0],1)/0.6)
+            xgrid = math.ceil(self.location[0,0]/0.6096)
+            zgrid = math.floor(self.location[2,0]/0.6096)
             gridletters = ['E','D','C','B','A']
             zgrid_corr = gridletters[self.bounded(0, 4, zgrid)]
             current_tile = f"{zgrid_corr}{xgrid}"
