@@ -47,7 +47,7 @@ class LocalizationReader:
 
     def get_orientation(self):
         with self.mutex:
-            return self.orientation
+            return self.orientation[1]
 
     def get_tile(self):
         with self.mutex:
@@ -103,7 +103,22 @@ class DriveToTile(State):
         self.tof_history = deque(maxlen=MAX_TOF_QUEUE)
         self.prev_distance = 0
         self.tof_tolerence = 0.75
-        
+        self.rotation_error = 30
+
+    def rotate_to_angle(self, target):
+        heading = self.localization_tracker.get_orientation()
+        deviation = ((target-heading+180) % 360) - 180
+        if deviation > 0:
+            cw = -1 # False
+        else:
+            cw = 1  # True
+
+        while abs(deviation) > self.rotation_error:
+            self.drive(linearVelocity=0, angularVelocity=cw*7)  # Might be backwards
+            self.rate.sleep()
+
+        return None
+
     def is_box_infront(self):
         if len([i for i in self.tof_history]) < MAX_TOF_QUEUE:
             return False
