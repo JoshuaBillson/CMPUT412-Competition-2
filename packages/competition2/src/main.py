@@ -158,6 +158,7 @@ class DriveToTile(State):
                 self.drive(angularVelocity=0, linearVelocity=VELOCITY)
             self.rate.sleep()
 
+        self.drive(0, 0)
         return "reached_destination"
 
 
@@ -171,8 +172,8 @@ class ChooseTile(State):
     def execute(self, ud):
         if len(self.path) == 0:
             self.path = self.map.get_path(self.current_tile, "E3")
-            rospy.loginfo(f"PATH: {self.path}")
         ud.destination = self.path.pop(0)
+        rospy.loginfo(f"PATH: {self.path}")
         return "drive_to_tile"
 
 
