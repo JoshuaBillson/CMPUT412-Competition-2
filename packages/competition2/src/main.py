@@ -106,8 +106,7 @@ class DriveToTile(State):
         self.rotation_error = 30
 
     def rotate_to_angle(self, target):
-        heading = self.localization_tracker.get_orientation()
-        deviation = ((target-heading+180) % 360) - 180
+        deviation = ((target-self.localization_tracker.get_orientation()+180) % 360) - 180
         if deviation > 0:
             cw = -1 # False
         else:
@@ -116,6 +115,7 @@ class DriveToTile(State):
         while abs(deviation) > self.rotation_error:
             self.drive(linearVelocity=0, angularVelocity=cw*7)  # Might be backwards
             self.rate.sleep()
+            deviation = ((target-self.localization_tracker.get_orientation()+180) % 360) - 180
 
         return None
 
