@@ -16,7 +16,7 @@ from collections import deque
 HOSTNAME = "/" + os.uname()[1]
 MOTOR_TOPIC = HOSTNAME + "/car_cmd_switch_node/cmd"
 LOCATION_TOPIC = HOSTNAME + "/output/location"
-VELOCITY = 0.30
+VELOCITY = 0.25
 MAX_TOF_QUEUE = 5
 
 class MotorController:
@@ -154,16 +154,14 @@ class ChooseTile(State):
     def __init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, localization_tracker):
         State.__init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, localization_tracker, outcomes=["finish", "drive_to_tile"], output_keys=["destination"])
         self.map = Map()
+        self.current_tile = "C2"
+        self.path = []
 
     def execute(self, ud):
-        counter = 0
-        while counter < 10:
-            position, orientation, tag, tile = self.get_localization()
-            rospy.loginfo(f"Position: {position}  Orientation: {orientation}  Tile: {tile}  Counter: {counter}")
-            self.drive(0, 0)
-            self.rate.sleep()
-            counter += 1
-        ud.destination = "A5"
+        if len(self.path) == 0:
+            self.path = self.map.get_path(self.current_tile, "E3")
+            rospy.loginfo(f"PATH: {self.path}")
+        ud.destination = self.path.pop(0)
         return "drive_to_tile"
 
 
