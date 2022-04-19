@@ -16,7 +16,7 @@ from collections import deque
 HOSTNAME = "/" + os.uname()[1]
 MOTOR_TOPIC = HOSTNAME + "/car_cmd_switch_node/cmd"
 LOCATION_TOPIC = HOSTNAME + "/output/location"
-VELOCITY = 0.15
+VELOCITY = 0.25
 MAX_TOF_QUEUE = 5
 
 class MotorController:
@@ -63,7 +63,7 @@ class State(smach.State):
         smach.State.__init__(self, outcomes=outcomes, input_keys=input_keys, output_keys=output_keys)
 
         # Publishers And Subscribers
-        self.rate = rospy.Rate(20)
+        self.rate = rospy.Rate(30)
         self.line_tracker: LineTracker = line_tracker
         self.motor_publisher: MotorController = motor_publisher
         self.tof_tracker: TofTracker = tof_tracker
@@ -72,7 +72,7 @@ class State(smach.State):
 
         # Local Variables
         self.current_tile = None
-        self.offset = 125
+        self.offset = 50
     
     def drive(self, angularVelocity, linearVelocity=VELOCITY):
         self.motor_publisher.drive(angularVelocity, linearVelocity)
@@ -83,10 +83,10 @@ class State(smach.State):
     def track_line(self):
         centroid = self.line_tracker.get_line()
         omega = -(centroid + self.offset)/26
-        if omega <= -5:
-            omega = -5
-        elif omega >= 5:
-            omega = 5
+        if omega <= -4:
+            omega = -4
+        elif omega >= 4:
+            omega = 4
         return omega
 
     def track_tof(self):
@@ -130,7 +130,7 @@ class DriveToTile(State):
         rospy.loginfo(f"Destination: {ud.destination}")
         while self.track_line() == 0:
             self.rate.sleep()
-        while not rospy.is_shutdown():
+        while self.localization_tracker.get_tile() != ud.destination:
             """
             # Put current tof into queue
             distance = self.tof_tracker.get_distance()
@@ -158,7 +158,7 @@ class DriveToTile(State):
                 self.drive(angularVelocity=0, linearVelocity=VELOCITY)
             self.rate.sleep()
 
-        return "intersection"
+        return "reached_destination"
 
 
 class ChooseTile(State):
