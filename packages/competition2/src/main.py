@@ -81,7 +81,8 @@ class State(smach.State):
         self.motor_publisher.drive(0, 0)
     
     def track_line(self):
-        omega = self.line_tracker.get_line()
+        centroid = self.line_tracker.get_line()
+        omega = -(centroid + self.offset)/26
         if omega <= -5:
             omega = -5
         elif omega >= 5:
