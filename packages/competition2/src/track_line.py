@@ -51,7 +51,7 @@ class Camera(DTROS):
                                                        cv2.CHAIN_APPROX_NONE)
                 max_idx = -1
                 max_area = 0
-                centroid = -1
+                centroid = -999
 
                 # Search for lane in front / find max area
                 for i in range(len(contours)):
