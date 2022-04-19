@@ -16,7 +16,7 @@ from collections import deque
 HOSTNAME = "/" + os.uname()[1]
 MOTOR_TOPIC = HOSTNAME + "/car_cmd_switch_node/cmd"
 LOCATION_TOPIC = HOSTNAME + "/output/location"
-VELOCITY = 0.25
+VELOCITY = 0.20
 MAX_TOF_QUEUE = 5
 
 class MotorController:
@@ -72,7 +72,7 @@ class State(smach.State):
 
         # Local Variables
         self.current_tile = None
-        self.offset = 50
+        self.offset = 75
     
     def drive(self, angularVelocity, linearVelocity=VELOCITY):
         self.motor_publisher.drive(angularVelocity, linearVelocity)
@@ -83,10 +83,10 @@ class State(smach.State):
     def track_line(self):
         centroid = self.line_tracker.get_line()
         omega = -(centroid + self.offset)/26
-        if omega <= -4:
-            omega = -4
-        elif omega >= 4:
-            omega = 4
+        if omega <= -3:
+            omega = -3
+        elif omega >= 3:
+            omega = 3
         return omega
 
     def track_tof(self):
@@ -171,9 +171,11 @@ class DriveToTile(State):
                 self.drive(angularVelocity=self.track_line(), linearVelocity=VELOCITY)
             else:
                 self.drive(angularVelocity=0, linearVelocity=VELOCITY)
+            rospy.loginfo(self.localization_tracker.get_tile())
             self.rate.sleep()
 
         self.drive(0, 0)
+        rospy.sleep(2)
         return "reached_destination"
 
 
@@ -181,12 +183,12 @@ class ChooseTile(State):
     def __init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, localization_tracker):
         State.__init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, localization_tracker, outcomes=["finish", "drive_to_tile"], output_keys=["destination"])
         self.map = Map()
-        self.current_tile = "C2"
+        self.current_tile = "A1"
         self.path = []
 
     def execute(self, ud):
         if len(self.path) == 0:
-            self.path = self.map.get_path(self.current_tile, "E3")
+            self.path = self.map.get_path(self.current_tile, "A4")
         ud.destination = self.path.pop(0)
         rospy.loginfo(f"PATH: {self.path}")
         return "drive_to_tile"
