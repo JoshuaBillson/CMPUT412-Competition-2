@@ -109,7 +109,22 @@ class DriveToTile(State):
         self.tof_history = deque(maxlen=MAX_TOF_QUEUE)
         self.prev_distance = 0
         self.tof_tolerence = 0.75
-        
+
+    def rotate_to_angle(self, target):
+        """NOT TESTED, ROTATION MIGHT BE BACKWARDS"""
+        deviation = ((target-self.localization_tracker.get_orientation()+180) % 360) - 180
+        if deviation > 0:
+            cw = -1 # False
+        else:
+            cw = 1  # True
+
+        while abs(deviation) > self.rotation_error:
+            self.drive(linearVelocity=0, angularVelocity=cw*4)  # Might be backwards
+            self.rate.sleep()
+            deviation = ((target-self.localization_tracker.get_orientation()+180) % 360) - 180
+
+        return None
+
     def is_box_infront(self):
         if len([i for i in self.tof_history]) < MAX_TOF_QUEUE:
             return False
