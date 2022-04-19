@@ -81,6 +81,7 @@ class State(smach.State):
         self.motor_publisher.drive(0, 0)
     
     def track_line(self):
+        omega = -(self.line_tracker.get_line() + self.offset) / 26
         return -(self.line_tracker.get_line() + self.offset) / 26
 
     def track_tof(self):
