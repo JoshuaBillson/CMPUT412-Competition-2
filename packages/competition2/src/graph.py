@@ -29,7 +29,16 @@ class Map:
             "E3": ["E2", "C3", "E4"],
             "E4": ["E3", "E5"], 
             "E5": ["E4", "D5"], 
-            }
+        }
+        self.intersections = {
+            "B1": ["C1", "B4"], 
+            "B4": ["B1", "D4", "D5"], 
+            "C1": ["B1", "D3", "E3"], 
+            "D3": ["C1", "D4", "E3"], 
+            "D4": ["D3", "B4", "D5"], 
+            "D5": ["D4", "B4", "E3"], 
+            "E3": ["C1", "D3", "D5"],
+        }
 
     def get_path(self, origin, destination):
         self.visited.append(origin)
