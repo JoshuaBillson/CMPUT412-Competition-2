@@ -4,7 +4,7 @@ import math
 import csv
 from tag import Tag
 
-class Planner():
+class Planner:
     def __init__(self):
         tag_order = []
 
@@ -17,7 +17,7 @@ class Planner():
         
         return tag_order
 
-    def get_dict(self):
+    def get_intersection_from_tag(self, tag_id):
         # following dictionary takes into account offset to mid point between clear tape and tag
         tag_dict = {
             "8":{"intersection":"B4","coords":(1.89,2.83),"orient":0},
@@ -61,4 +61,38 @@ class Planner():
             "303":{"intersection":"D5","coords":(2.415,0.785),"orient":math.pi},
             "304":{"intersection":"B4","coords":(1.305,2.285),"orient":math.pi/2},
         }
-        return tag_dict
+        return tag_dict[tag_id]
+
+    def get_tag_at_orientation_and_intersection(self, intersection, angle):
+        dictionary = {
+            ("C1", 0): "228", 
+            ("C1", -math.pi / 2): "67", 
+            ("C1", math.pi / 2): "38", 
+            ("C1", math.pi): "227", 
+            ("B1", math.pi): "205", 
+            ("B1", 0): "36", 
+            ("B1", -math.pi / 2): "75", 
+            ("B1", math.pi / 2): "192", 
+            ("B1", math.pi): "226", 
+            ("B4", 0): "44", 
+            ("B4", -math.pi / 2): "46", 
+            ("B4", math.pi / 2): "45", 
+            ("B4", math.pi): "47", 
+            ("D5", 0): "90", 
+            ("D5", math.pi / 2): "89", 
+            ("D5", math.pi): "303", 
+            ("D4", 0): "44", 
+            ("D4", -math.pi / 2): "91", 
+            ("D4", math.pi / 2): "89", 
+            ("D4", math.pi): "92", 
+            ("D3", 0): "35", 
+            ("D3", -math.pi / 2): "91", 
+            ("D3", math.pi / 2): "207", 
+            ("D3", math.pi): "14", 
+            ("E3", 0): "35", 
+            ("E3", -math.pi / 2): "206", 
+            ("E3", math.pi / 2): "37", 
+            ("E3", math.pi): "205", 
+        }
+        return dictionary[(intersection, angle)]
+

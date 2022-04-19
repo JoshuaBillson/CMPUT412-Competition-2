@@ -1,4 +1,4 @@
 geometry_msgs/Vector3 position
 geometry_msgs/Vector3 orientation
-std_msgs/Int32 tag_id
+std_msgs/Int32MultiArray tag_id
 std_msgs/String Quadrant
