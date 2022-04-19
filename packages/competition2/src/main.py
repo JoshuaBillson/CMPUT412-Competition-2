@@ -16,7 +16,7 @@ from collections import deque
 HOSTNAME = "/" + os.uname()[1]
 MOTOR_TOPIC = HOSTNAME + "/car_cmd_switch_node/cmd"
 LOCATION_TOPIC = HOSTNAME + "/output/location"
-VELOCITY = 0.40
+VELOCITY = 0.30
 MAX_TOF_QUEUE = 5
 
 class MotorController:
@@ -132,7 +132,7 @@ class DriveToTile(State):
             self.prev_distance = distance
 
             #  If box in front, switch lanes and save current wheel encoder
-            if distance < self.min_distance and self.lane_changed is False:
+            if distance < self.min_dist and self.lane_changed is False:
                 if self.is_box_infront():
                     self.saved_ticks = self.left_tracker.get_left_ticks()
                     self.offset *= -1
