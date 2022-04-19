@@ -13,7 +13,7 @@ from tag import Tag
 from sensor_msgs.msg import CompressedImage
 from competition2.msg import Localization
 from geometry_msgs.msg import Quaternion, Point, Pose, Vector3
-from std_msgs.msg import Int32, String
+from std_msgs.msg import Int32, String, Int32MultiArray
 from tf.transformations import quaternion_from_euler, euler_from_quaternion
 from dt_apriltags import Detector
 from duckietown.dtros import DTROS, NodeType
@@ -159,8 +159,7 @@ class LocalizationNode(DTROS):
                 #rospy.loginfo([tag.tag_id for tag in tags])
                 # Publish Tag ID
                 if len(tags) > 0:
-                    tag = tags[0]
-                    tag_id_msg = Int32(tag.tag_id)
+                    tag_id_msg = Int32MultiArray(data=[tag.tag_id for tag in tags])
                     msg.tag_id = tag_id_msg
 
                 # Relocalize

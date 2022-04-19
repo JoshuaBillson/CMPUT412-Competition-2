@@ -4,7 +4,7 @@ import math
 import csv
 from tag import Tag
 
-class Planner():
+class Planner:
     def __init__(self):
         tag_order = []
 
@@ -17,49 +17,7 @@ class Planner():
         
         return tag_order
 
-    def get_dict(self):
-#         tag_dict = {
-#             "8":{"intersection":"A4","coords":(1.74,2.93),"orient":math.pi/2},
-#             "13":{"intersection":"B3","coords":(1.47,1.82),"orient":-math.pi/2},
-# #             "14":{"intersection":"D3","coords":(1.22,0.635),"orient":math.pi},
-#             "15":{"intersection":"E4","coords":(2.535,0.045),"orient":-math.pi/2},
-# #             "21":{"intersection":"C4","coords":(1.815,1.48),"orient":math.pi},
-# #             "22":{"intersection":"E4","coords":(2.08,0.56),"orient":math.pi/2},
-#             "23":{"intersection":"C5","coords":(2.925,1.82),"orient":0},
-#             "24":{"intersection":"A3","coords":(1.12,2.93),"orient":math.pi/2},
-#             "35":{"intersection":"D3","coords":(1.74,1.155),"orient":0},
-#             "36":{"intersection":"B1","coords":(0.56,2.335),"orient":0},
-# #             "37":{"intersection":"E3","coords":(1.22,0.56),"orient":math.pi/2},
-#             "38":{"intersection":"C1","coords":(0.045,1.75),"orient":math.pi/2},
-#             "44":{"intersection":"B4","coords":(2.335,2.335),"orient":0},
-#             "45":{"intersection":"B4","coords":(2.335,1.82),"orient":-math.pi/2},
-#             "46":{"intersection":"B4","coords":(1.815,2.335),"orient":math.pi/2},
-#             "47":{"intersection":"B4","coords":(1.815,1.82),"orient":math.pi},
-#             "59":{"intersection":"A1","coords":(0.425,2.93),"orient":math.pi/2},
-# #             "63":{"intersection":"E2","coords":(0.56,0.56),"orient":math.pi/2},
-# #             "67":{"intersection":"C2","coords":(0.88,1.225),"orient":-math.pi/2},
-#             "75":{"intersection":"B2","coords":(0.87,1.82),"orient":-math.pi/2},
-#             "76":{"intersection":"D1","coords":(0.045,0.605),"orient":math.pi},
-#             "77":{"intersection":"C5","coords":(2.55,1.505),"orient":math.pi},
-# #             "78":{"intersection":"C3","coords":(1.115,1.75),"orient":math.pi/2},
-# #             "89":{"intersection":"D4","coords":(1.815,1.115),"orient":math.pi/2},
-# #             "90":{"intersection":"D5","coords":(2.925,1.155),"orient":0},
-#             "91":{"intersection":"D4","coords":(2.335,0.635),"orient":-math.pi/2},
-# #             "92":{"intersection":"D4","coords":(1.815,0.635),"orient":math.pi},
-#             "164":{"intersection":"A2","coords":(0.965,2.41),"orient":-math.pi/2},
-# #             "166":{"intersection":"D5","coords":(2.925,0.635),"orient":-math.pi/2},
-#             "190":{"intersection":"A3","coords":(1.59,2.41),"orient":-math.pi/2},
-# #             "191":{"intersection":"E1","coords":(0.635,0.045),"orient":-math.pi/2},
-#             "192":{"intersection":"B1","coords":(0.045,2.335),"orient":math.pi/2},
-# #             "205":{"intersection":"E3","coords":(1.22,0.045),"orient":math.pi},
-# #             "206":{"intersection":"E3","coords":(1.74,0.045),"orient":-math.pi/2},
-# #             "207":{"intersection":"D3","coords":(1.22,1.155),"orient":math.pi/2},
-#             "226":{"intersection":"B1","coords":(0.045,1.82),"orient":math.pi},
-# #             "227":{"intersection":"C1","coords":(0.045,1.225),"orient":math.pi},
-# #             "228":{"intersection":"C1","coords":(0.56,1.75),"orient":0},
-# #             "303":{"intersection":"D5","coords":(2.415,0.635),"orient":math.pi},
-#             "304":{"intersection":"B3","coords":(1.155,2.335),"orient":math.pi/2},
-#         }
+    def get_intersection_from_tag(self, tag_id):
         # following dictionary takes into account offset to mid point between clear tape and tag
         tag_dict = {
             "8":{"intersection":"B4","coords":(1.89,2.83),"orient":0},
@@ -103,4 +61,38 @@ class Planner():
             "303":{"intersection":"D5","coords":(2.415,0.785),"orient":math.pi},
             "304":{"intersection":"B4","coords":(1.305,2.285),"orient":math.pi/2},
         }
-        return tag_dict
+        return tag_dict[tag_id]
+
+    def get_tag_at_orientation_and_intersection(self, intersection, angle):
+        dictionary = {
+            ("C1", 0): "228", 
+            ("C1", -math.pi / 2): "67", 
+            ("C1", math.pi / 2): "38", 
+            ("C1", math.pi): "227", 
+            ("B1", math.pi): "205", 
+            ("B1", 0): "36", 
+            ("B1", -math.pi / 2): "75", 
+            ("B1", math.pi / 2): "192", 
+            ("B1", math.pi): "226", 
+            ("B4", 0): "44", 
+            ("B4", -math.pi / 2): "46", 
+            ("B4", math.pi / 2): "45", 
+            ("B4", math.pi): "47", 
+            ("D5", 0): "90", 
+            ("D5", math.pi / 2): "89", 
+            ("D5", math.pi): "303", 
+            ("D4", 0): "44", 
+            ("D4", -math.pi / 2): "91", 
+            ("D4", math.pi / 2): "89", 
+            ("D4", math.pi): "92", 
+            ("D3", 0): "35", 
+            ("D3", -math.pi / 2): "91", 
+            ("D3", math.pi / 2): "207", 
+            ("D3", math.pi): "14", 
+            ("E3", 0): "35", 
+            ("E3", -math.pi / 2): "206", 
+            ("E3", math.pi / 2): "37", 
+            ("E3", math.pi): "205", 
+        }
+        return dictionary[(intersection, angle)]
+
