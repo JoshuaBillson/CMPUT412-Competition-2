@@ -81,7 +81,12 @@ class State(smach.State):
         self.motor_publisher.drive(0, 0)
     
     def track_line(self):
-        return -(self.line_tracker.get_line() + self.offset) / 26
+        omega = self.line_tracker.get_line()
+        if omega <= -5:
+            omega = -5
+        elif omega >= 5:
+            omega = 5
+        return omega
 
     def track_tof(self):
         return self.tof_tracker.get_distance()
@@ -144,7 +149,9 @@ class DriveToTile(State):
                 rospy.loginfo("CHANGING TO RIGHT LANE")
                 self.offset *= -1
                 self.lane_changed = False
-            self.drive(angularVelocity=self.track_line(), linearVelocity=VELOCITY)
+
+            if self.line_tracker.get_line != -999
+                self.drive(angularVelocity=self.track_line(), linearVelocity=VELOCITY)
             self.rate.sleep()
 
         return "intersection"
