@@ -9,6 +9,7 @@ import os
 from threading import Lock
 
 road_mask = [(20,60,0), (50,255,255)]
+stop_mask = [(150, 100, 100), (180, 255, 255)]
 HOSTNAME = "/" + os.uname()[1]
 
 class Camera(DTROS):
@@ -25,8 +26,12 @@ class Camera(DTROS):
         self.pub = rospy.Publisher("/output/line_tracker",
                                    Float32,
                                    queue_size=1)
+        self.stop_pub = rospy.Publisher("/output/stop_detector",
+                                        Bool,
+                                        queue_size=1)
         self.np_arr = None
         self.msg = Float32()
+        self.stop_msg = Bool()
         self.mutex = Lock()
         self.rate = rospy.Rate(30)
 
@@ -46,9 +51,11 @@ class Camera(DTROS):
                 crop_width = crop.shape[1]
                 hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
                 mask = cv2.inRange(hsv, road_mask[0], road_mask[1])
+                mask_stop = cv2.inrange(hsv, stop_mask[0], stop_mask[1])
                 contours, hierarchy = cv2.findContours(mask,
                                                        cv2.RETR_EXTERNAL,
                                                        cv2.CHAIN_APPROX_NONE)
+                stop_contours, stop_h = cv2.findContours(mask_stop,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)
                 max_idx = -1
                 max_area = 0
                 centroid = -999
@@ -59,6 +66,11 @@ class Camera(DTROS):
                     if area > max_area:
                         max_idx = i
                         max_area = area
+                for j in range(len(stop_contours)):
+                    stop_area = cv2.contourArea(stop_contours[j])
+                    if stop_area > 50:
+                        self.stop_msg.data = True
+                        self.stop_pub.publish(True)
 
                 if max_idx != -1:
                     M = cv2.moments(contours[max_idx])
