@@ -151,11 +151,12 @@ class LocalizationNode(DTROS):
                     l, r = self.tags.estimate_pose(str(tag.tag_id), tag.pose_R, tag.pose_t)
                     distance_l = np.linalg.norm(l - self.location)
                     distance_r = np.linalg.norm(r - self.rotation)
-                    if distance_r < self.discarded_readings * 15:
+                    if distance_r < self.discarded_readings * 360:
                         location += l
                         rotation += r
                         count += 1
 
+                #rospy.loginfo([tag.tag_id for tag in tags])
                 # Publish Tag ID
                 if len(tags) > 0:
                     tag = tags[0]

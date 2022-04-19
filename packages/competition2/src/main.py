@@ -16,7 +16,7 @@ from collections import deque
 HOSTNAME = "/" + os.uname()[1]
 MOTOR_TOPIC = HOSTNAME + "/car_cmd_switch_node/cmd"
 LOCATION_TOPIC = HOSTNAME + "/output/location"
-VELOCITY = 0.40
+VELOCITY = 0.20
 MAX_TOF_QUEUE = 5
 
 class MotorController:
@@ -63,7 +63,7 @@ class State(smach.State):
         smach.State.__init__(self, outcomes=outcomes, input_keys=input_keys, output_keys=output_keys)
 
         # Publishers And Subscribers
-        self.rate = rospy.Rate(10)
+        self.rate = rospy.Rate(30)
         self.line_tracker: LineTracker = line_tracker
         self.motor_publisher: MotorController = motor_publisher
         self.tof_tracker: TofTracker = tof_tracker
@@ -72,7 +72,7 @@ class State(smach.State):
 
         # Local Variables
         self.current_tile = None
-        self.offset = 125
+        self.offset = 75
     
     def drive(self, angularVelocity, linearVelocity=VELOCITY):
         self.motor_publisher.drive(angularVelocity, linearVelocity)
@@ -81,7 +81,13 @@ class State(smach.State):
         self.motor_publisher.drive(0, 0)
     
     def track_line(self):
-        return -(self.line_tracker.get_line() + self.offset) / 26
+        centroid = self.line_tracker.get_line()
+        omega = -(centroid + self.offset)/26
+        if omega <= -3:
+            omega = -3
+        elif omega >= 3:
+            omega = 3
+        return omega
 
     def track_tof(self):
         return self.tof_tracker.get_distance()
@@ -103,7 +109,22 @@ class DriveToTile(State):
         self.tof_history = deque(maxlen=MAX_TOF_QUEUE)
         self.prev_distance = 0
         self.tof_tolerence = 0.75
-        
+
+    def rotate_to_angle(self, target):
+        """NOT TESTED, ROTATION MIGHT BE BACKWARDS"""
+        deviation = ((target-self.localization_tracker.get_orientation()+180) % 360) - 180
+        if deviation > 0:
+            cw = -1 # False
+        else:
+            cw = 1  # True
+
+        while abs(deviation) > self.rotation_error:
+            self.drive(linearVelocity=0, angularVelocity=cw*4)  # Might be backwards
+            self.rate.sleep()
+            deviation = ((target-self.localization_tracker.get_orientation()+180) % 360) - 180
+
+        return None
+
     def is_box_infront(self):
         if len([i for i in self.tof_history]) < MAX_TOF_QUEUE:
             return False
@@ -124,7 +145,8 @@ class DriveToTile(State):
         rospy.loginfo(f"Destination: {ud.destination}")
         while self.track_line() == 0:
             self.rate.sleep()
-        while not rospy.is_shutdown():
+        while self.localization_tracker.get_tile() != ud.destination:
+            """
             # Put current tof into queue
             distance = self.tof_tracker.get_distance()
             if distance != self.prev_distance:
@@ -144,26 +166,31 @@ class DriveToTile(State):
                 rospy.loginfo("CHANGING TO RIGHT LANE")
                 self.offset *= -1
                 self.lane_changed = False
-            self.drive(angularVelocity=self.track_line(), linearVelocity=VELOCITY)
+            """
+            if self.line_tracker.get_line() != -999:
+                self.drive(angularVelocity=self.track_line(), linearVelocity=VELOCITY)
+            else:
+                self.drive(angularVelocity=0, linearVelocity=VELOCITY)
+            rospy.loginfo(self.localization_tracker.get_tile())
             self.rate.sleep()
 
-        return "intersection"
+        self.drive(0, 0)
+        rospy.sleep(2)
+        return "reached_destination"
 
 
 class ChooseTile(State):
     def __init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, localization_tracker):
         State.__init__(self, motor_publisher, line_tracker, tof_tracker, left_tracker, localization_tracker, outcomes=["finish", "drive_to_tile"], output_keys=["destination"])
         self.map = Map()
+        self.current_tile = "A1"
+        self.path = []
 
     def execute(self, ud):
-        counter = 0
-        while counter < 10:
-            position, orientation, tag, tile = self.get_localization()
-            rospy.loginfo(f"Position: {position}  Orientation: {orientation}  Tile: {tile}  Counter: {counter}")
-            self.drive(0, 0)
-            self.rate.sleep()
-            counter += 1
-        ud.destination = "A5"
+        if len(self.path) == 0:
+            self.path = self.map.get_path(self.current_tile, "A4")
+        ud.destination = self.path.pop(0)
+        rospy.loginfo(f"PATH: {self.path}")
         return "drive_to_tile"
 
 
