@@ -16,7 +16,7 @@ from collections import deque
 HOSTNAME = "/" + os.uname()[1]
 MOTOR_TOPIC = HOSTNAME + "/car_cmd_switch_node/cmd"
 LOCATION_TOPIC = HOSTNAME + "/output/location"
-VELOCITY = 0.20
+VELOCITY = 0.15
 MAX_TOF_QUEUE = 5
 
 class MotorController:
@@ -63,7 +63,7 @@ class State(smach.State):
         smach.State.__init__(self, outcomes=outcomes, input_keys=input_keys, output_keys=output_keys)
 
         # Publishers And Subscribers
-        self.rate = rospy.Rate(10)
+        self.rate = rospy.Rate(20)
         self.line_tracker: LineTracker = line_tracker
         self.motor_publisher: MotorController = motor_publisher
         self.tof_tracker: TofTracker = tof_tracker
@@ -152,8 +152,10 @@ class DriveToTile(State):
                 self.offset *= -1
                 self.lane_changed = False
             """
-            if self.line_tracker.get_line != -999:
+            if self.line_tracker.get_line() != -999:
                 self.drive(angularVelocity=self.track_line(), linearVelocity=VELOCITY)
+            else:
+                self.drive(angularVelocity=0, linearVelocity=VELOCITY)
             self.rate.sleep()
 
         return "intersection"
