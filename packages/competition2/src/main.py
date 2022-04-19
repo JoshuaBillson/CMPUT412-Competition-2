@@ -16,7 +16,7 @@ from collections import deque
 HOSTNAME = "/" + os.uname()[1]
 MOTOR_TOPIC = HOSTNAME + "/car_cmd_switch_node/cmd"
 LOCATION_TOPIC = HOSTNAME + "/output/location"
-VELOCITY = 0.25
+VELOCITY = 0.20
 MAX_TOF_QUEUE = 5
 
 class MotorController:
@@ -130,6 +130,7 @@ class DriveToTile(State):
         while self.track_line() == 0:
             self.rate.sleep()
         while not rospy.is_shutdown():
+            """
             # Put current tof into queue
             distance = self.tof_tracker.get_distance()
             if distance != self.prev_distance:
@@ -149,8 +150,8 @@ class DriveToTile(State):
                 rospy.loginfo("CHANGING TO RIGHT LANE")
                 self.offset *= -1
                 self.lane_changed = False
-
-            if self.line_tracker.get_line != -999
+            """
+            if self.line_tracker.get_line != -999:
                 self.drive(angularVelocity=self.track_line(), linearVelocity=VELOCITY)
             self.rate.sleep()
 
